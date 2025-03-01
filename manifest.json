@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Google Forms Submitter",
+  "version": "1.0",
+  "host_permissions": [
+    "https://www.googleapis.com/*"
+  ],
+  "permissions": ["identity"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "128": "logo_128.png"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "oauth2": {
+    "client_id": "631811695190-pu5s4pirlh4fes00frm90jmp1klhusbd.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/script.external_request"]
+  }
+}

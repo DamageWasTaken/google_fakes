@@ -1,0 +1,135 @@
+@font-face {
+    font-family: "product-sans";
+    src: url("product-sans-regular.ttf");
+}
+
+@font-face {
+    font-family: "product-sans-bold";
+    src: url("product-sans-bold.ttf");
+}
+
+:root {
+    font-family: product-sans, sans-serif; 
+    --purple: #7249B9;
+}
+
+:root[data-UIStyle="light"] {
+    --bg: #F7F8F9;
+    --text: darkslategray;
+}
+
+:root[data-UIStyle="dark"] {
+    --bg: #292929;
+    --accent: #161A1D;
+    --bg2: #373737;
+    --text: #F7F8F9;
+}
+
+html {
+    border: none;
+    color: var(--text);
+    scrollbar-width: none;
+}
+
+body { 
+    font-family: product-sans-bold, sans-serif; 
+    text-align: center; 
+    padding: 0;
+    margin: 0; 
+    width: 400px;
+    height: 700px;
+    background-color: var(--bg);
+}
+
+nav {
+    position: sticky;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    top: 0;
+    padding: 0 8px 0 8px;
+    overflow: hidden;
+    transition: 0.2s;
+    width: 100%;
+    height: 42px;
+    background-color: var(--bg);
+}
+
+/*button {
+    font-family: product-sans, sans-serif; 
+    padding: 10px 20px; 
+    font-size: 16px; 
+    cursor: pointer;
+}*/
+
+#content {
+    padding-top: 20px;
+    width: 100%;
+    height: 100%;
+}
+
+#title-text {
+    font-family: product-sans, sans-serif; 
+    font-size: 24px;
+    margin: 0;
+    transition: 0.2s;
+    color: var(--text);
+}
+
+#logo {
+    height: 80%;
+    margin: 6px;
+}
+
+#add-answer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text);
+    border: solid var(--accent) 3px;
+    border-radius: 1vh;
+    width: 200px;
+    height: 25px;
+    font-size: 14px;
+    background-color: var(--bg2);
+}
+
+#forms-frame {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+.text {
+  margin: 0;  
+}
+
+.bold {
+    font-family: product-sans-bold, sans-serif; 
+}
+
+.selector-popup {
+    display: none;
+    position: absolute;
+
+}
+
+#add-answer:hover>.selector-popup {
+    display: flex !important;
+    flex-direction: column;
+}
+
+.selector-option {
+    font-size: 12px;
+    background-color: var(--bg2);
+}
+
+.input-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.input-field {
+    width: 50px;
+}

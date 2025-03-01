@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-UIStyle="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Form</title>
+    <script src="popup.js"></script>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<nav id="nav-bar">
+  <img id="logo" src="logo_128.png">
+  <p id="title-text"><span class="bold">Google</span> Fakes</p>
+  <p id="status"></p>
+</nav>
+<body>
+  <div id="content">
+    <input type="url" id="input-url" placeholder="https://docs.google.com/forms/" pattern="https://.*" size="30" >
+    <input type="number" id="input-amount" placeholder="Antal svar" size="30" >
+    <div id="forms-frame">
+      <!--<div class="frame-element">
+        <p class="id-number">1</p>
+        <p>Gaussian Distribution</p>
+        <div class="input-container">
+          <input class="input-field" type="number">
+          <input class="input-field" type="number">
+          <button id="p-add-button" class="add-button">+</button>
+        </div>
+        <button id="p-delete-button" class="delete-button">x</button>
+      </div>-->
+      <div class="button" id="add-answer">
+        <p class="text">Tilføj svar</p>
+        <div class="selector-popup">
+          <div class="selector-option">Gaussian Distribution</div>
+          <div class="selector-option">Biased Random</div>
+          <div class="selector-option">Multi Biased Random</div>
+          <div class="selector-option">Random</div>
+          <div class="selector-option">Multi Random</div>
+          <div class="selector-option">Blank</div>
+          <div class="selector-option">Page Break</div>
+        </div>
+      </div>
+    </div>
+    <!--<div id="temp-submit-button">Submit</div>-->
+    <button id="submitForm">Submit Response</button>
+    <p id="status"></p>
+  </div>
+</body>
+</html>
