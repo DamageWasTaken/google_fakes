@@ -4,7 +4,7 @@ var SCRIPT_ID = 'AKfycbzq_RL9k-na3leGNx-z9Ua3aitHSYN7z8wBmOIzrtZn0eFuzW3Ah-1gsPz
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "submitForm") {
-      submitFormResponse(message.answers)
+      submitFormResponse(message.answer)
           .then(response => sendResponse({ success: true, data: response }))
           .catch(error => sendResponse({ success: false, error: error.message }));
       return true;
@@ -12,6 +12,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 function submitFormResponse(answers) {
+    console.log(answers);
   return new Promise((resolve, reject) => {
       chrome.identity.getAuthToken({ interactive: true }, (token) => {
           if (chrome.runtime.lastError) {
@@ -30,7 +31,7 @@ function submitFormResponse(answers) {
               },
               body: JSON.stringify({
                   function: "callScript",
-                  parameters: [answers]
+                  parameters: [answers ?? []]
               })
           })
           .then(response => response.json())

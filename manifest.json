@@ -17,6 +17,6 @@
   },
   "oauth2": {
     "client_id": "631811695190-pu5s4pirlh4fes00frm90jmp1klhusbd.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/script.external_request"]
+    "scopes": ["https://www.googleapis.com/auth/script.external_request", "https://www.googleapis.com/auth/forms"]
   }
 }
