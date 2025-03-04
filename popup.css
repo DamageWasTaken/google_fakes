@@ -109,6 +109,7 @@ p {
     height: 30px;
     font-size: 14px;
     background-color: var(--bg2);
+    z-index: 1;
 }
 
 #forms-frame {
