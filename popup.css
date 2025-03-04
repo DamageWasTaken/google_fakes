@@ -11,6 +11,8 @@
 :root {
     font-family: product-sans, sans-serif; 
     --purple: #7249B9;
+    --red: #C9372C;
+    --green: #22A06B;
     user-select: none;
 }
 
@@ -22,7 +24,7 @@
 :root[data-UIStyle="dark"] {
     --bg: #292929;
     --accent: #161A1D;
-    --bg2: #373737;
+    --bg2: #333333;
     --text: #F7F8F9;
 }
 
@@ -42,8 +44,9 @@ body {
     padding: 0;
     margin: 0; 
     width: 400px;
-    height: 700px;
+    height: auto;
     background-color: var(--bg);
+    min-height: 600px;
 }
 
 nav {
@@ -58,6 +61,11 @@ nav {
     width: 100%;
     height: 42px;
     background-color: var(--bg);
+    z-index: 1;
+}
+
+p {
+    font-family: product-sans;
 }
 
 /*button {
@@ -74,6 +82,7 @@ nav {
     width: 100%;
     height: 100%;
     align-items: center;
+    min-height: 512px;
 }
 
 #title-text {
@@ -94,21 +103,26 @@ nav {
     justify-content: center;
     align-items: center;
     color: var(--text);
-    border: solid var(--accent) 3px;
+    border: solid var(--accent) 2px;
     border-radius: 1vh;
     width: 200px;
-    height: 25px;
+    height: 30px;
     font-size: 14px;
     background-color: var(--bg2);
+    z-index: 1;
+    transition: 0.2s;
+    position: relative;
+    margin-bottom: 120px;   
 }
 
 #forms-frame {
     display: flex;
     align-items: center;
     flex-direction: column;
-    border: solid;
     width: 80%;
     position: relative;
+    row-gap: 15px;
+    padding-bottom: 15px;
 }
 
 .text {
@@ -120,39 +134,243 @@ nav {
 }
 
 .selector-popup {
-    display: none;
+    display: flex;
+    flex-direction: column;
     position: absolute;
-
+    transition: 0.2s;
+    width: 200px;
+    opacity: 0;
+    border-radius: 6px;
+    border: solid 2px var(--accent);
+    background: var(--bg2);
+    top: 30px;
+    visibility: hidden;
 }
 
 #add-answer:hover>.selector-popup {
-    display: flex !important;
-    flex-direction: column;
+    opacity: 1 !important;
+    transition: 0.2s;
+    visibility: visible;
 }
 
 .selector-option {
-    font-size: 12px;
+    font-size: 14px;
     background-color: var(--bg2);
+    font-family: 'product-sans';
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: solid 1px var(--bg2);
+    border-radius: 6px;
+}
+
+.selector-option:hover {
+    border: solid 1px var(--text);
 }
 
 .input-container {
     display: flex;
     flex-direction: row;
     align-items: center;
+    column-gap: 3px;
+    position: relative;
 }
 
 .input-field {
-    width: 50px;
+    width: 35px;
+    background-color: var(--bg2);
+    border: solid var(--accent) 2px;
+    border-radius: 6px;
+    height: 30px;
+    font-family: 'product-sans';
+    text-align: center;
+    color: var(--text);
+}
+
+input::-webkit-input-placeholder {
+    font-family: product-sans;
+}
+
+input:-ms-input-placeholder {
+    font-family: product-sans;
+}
+
+input:-moz-placeholder {
+    font-family: product-sans;
+}
+
+input::-moz-placeholder{
+    font-family: product-sans;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .id-number {
-    width: fit-content;
+    text-align: left;
+    width: 20px;
     margin: 0;
-    position: absolute;
-    left: 20px;
+    left: 10px;
+    font-size: 18px;
+    height: 20px;
 }
 
 .delete-button {
+    right: 10px;
+    fill: var(--red);
+    width: 20px;
+}
+
+#bottom-nav {
+    position: sticky;
+    bottom: 0;
+    background-color: var(--bg);
+    height: 26px;
+    overflow: hidden;
+    display: flex;
+    width: 95%;
+    justify-content: flex-start;
+    align-items: center;
+    margin: auto;
+}
+
+#status {
+    margin: 0;
+}
+
+.frame-element {
+    border: solid 2px var(--accent);
+    padding: 10px;
+    width: 95%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-radius: 6px;
+}
+
+.answer-text {
+    margin: 0;
+    font-family: 'product-sans-bold';
+    font-size: 15px;
+}
+
+.container {
+    row-gap: 10px;
+    display: flex;
+    flex-direction: column;
+    max-width: 260px;
+    align-items: center;
+}
+
+.add-button {
+    padding-left: 10px;
+    width: 20px;
+    stroke-width: 2px;
+    stroke: var(--green);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.input-container>.add-button {
+    right: -25px;
     position: absolute;
-    right: 0;
+    padding: 0;
+}
+
+.delete-button:hover {
+    transform: scale(1.05);
+}
+
+.input-container>.add-button:hover {
+    transform: scale(1.05);
+}
+
+#submitForm {
+    display: flex;
+    width: 80%;
+    margin-top: auto;
+    border: solid 2px var(--accent);
+    background-color: var(--bg2);
+    color: var(--text);
+    font-family: 'product-sans-bold';
+    height: 40px;
+    border-radius: 6px;
+    font-size: 18px;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+#submitForm:hover {
+    transition: 0.2s;
+    border: solid 2px var(--text);
+}
+
+.submitText {
+    margin: 0;
+}
+
+.plane {
+    height: 25px;
+    stroke: var(--text);
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    position: absolute;
+    right: 20px;
+}
+
+.utils-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 80%;
+    margin-bottom: 15px;
+}
+
+.utils-component {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin: 5px 0;
+    height: 30px;
+}
+
+.utils-text {
+    font-family: 'product-sans-bold';
+    padding: 0 10px 0 0;
+    text-wrap: nowrap;
+    margin: 0;
+    font-size: 14px;
+    position: relative;
+}
+
+.utils-text::before {
+    content: '*';
+    color: var(--red);
+    padding: 2px;
+    font-size: 10px;
+    position: absolute;
+    left: -10px;
+    top: -2px;
+}
+
+.utils-input {
+    width: 100%;
+    background-color: var(--bg2);
+    border: solid var(--accent) 2px;
+    border-radius: 6px;
+    height: 25px;
+    font-family: 'product-sans';
+    padding-left: 6px;
+    color: var(--text);
 }
