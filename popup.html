@@ -10,12 +10,19 @@
 <nav id="nav-bar">
   <img id="logo" src="images/logo_128.png">
   <p id="title-text"><span class="bold">Google</span> Fakes</p>
-  <p id="status"></p>
 </nav>
 <body>
   <div id="content">
-    <input type="url" id="input-url" placeholder="https://docs.google.com/forms/" pattern="https://.*" size="30" >
-    <input type="number" id="input-amount" placeholder="Antal svar" size="30" >
+    <div class="utils-container">
+      <div class="utils-component">
+        <p class="utils-text">URL</p>
+        <input type="url" id="input-url" placeholder="https://docs.google.com/forms/*" pattern="https://.*" class="utils-input">
+      </div>
+      <div class="utils-component">
+        <p class="utils-text">Answer amount</p>
+        <input type="number" id="input-amount" placeholder="Any number between 1 & 200" class="utils-input" >
+      </div>
+    </div>
     <div id="forms-frame">
       <!--<div class="frame-element">
         <p class="id-number">1</p>
@@ -28,7 +35,8 @@
         <button id="p-delete-button" class="delete-button">x</button>
       </div>-->
       <div class="button" id="add-answer">
-        <p class="text">Tilføj svar</p>
+        <p class="text">Add answer sheet</p>
+        <svg viewBox="0 0 16 16" fill="none" class="add-button"><path d="M 8 2 L 8 14 M 2 8 L 14 8"></path></svg>
         <div class="selector-popup">
           <div class="selector-option">Gaussian Distribution</div>
           <div class="selector-option">Biased Random</div>
@@ -40,9 +48,16 @@
         </div>
       </div>
     </div>
-    <!--<div id="temp-submit-button">Submit</div>-->
-    <button id="submitForm">Submit Response</button>
-    <p id="status"></p>
+    <div id="submitForm">
+      <p class="submitText">Submit Response</p>
+      <svg viewBox="0 0 64 64" class="plane">
+        <path fill="none" d="M26 38v21l10.3-14.6"></path>
+        <path fill="none" d="M3 29L59 5l-9 48-24-15-23-9zM59 5L26 38"></path>
+      </svg>
+    </div>
   </div>
 </body>
+<div id="bottom-nav">
+  <p id="status"><span class="bold">Status:</span> Ready</p>
+</div>
 </html>

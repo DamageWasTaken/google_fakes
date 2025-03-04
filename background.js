@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function submitFormResponse(answers) {
     console.log(answers);
   return new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ interactive: true }, (token) => {
+      chrome.identity.getAuthToken({ interactive: true, enableGranularPermissions: true}, (token) => {
           if (chrome.runtime.lastError) {
               console.error("Auth error:", chrome.runtime.lastError.message);
               reject(new Error("Authentication failed"));
