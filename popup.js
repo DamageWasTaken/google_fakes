@@ -118,9 +118,11 @@ function scrollFunction() {
     if (document.body.scrollTop >= 10 || document.documentElement.scrollTop >= 10) {
         document.getElementById("nav-bar").style.height = "30px";
         document.getElementById("title-text").style.fontSize = "12px";
+        document.getElementById("day-night-container").style.height = "30px";
     } else {
         document.getElementById("nav-bar").style.height = "42px";
         document.getElementById("title-text").style.fontSize = "22px";
+        document.getElementById("day-night-container").style.height = "40px";
     }
 }
 
@@ -210,5 +212,10 @@ function addAnswerPopup(answerType) {
     answer.id = order.length
     answer.params = [];
     order.push(answer);
+    window.scrollTo({
+        top: document.body.scrollHeight || document.documentElement.scrollHeight,
+        left: 0,
+        behavior: "smooth",
+    });
     save();
 }
