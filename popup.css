@@ -18,7 +18,9 @@
 
 :root[data-UIStyle="light"] {
     --bg: #F7F8F9;
-    --text: darkslategray;
+    --accent: #b7b7b7;
+    --bg2: #ebebeb;
+    --text: #292929;
 }
 
 :root[data-UIStyle="dark"] {
@@ -47,33 +49,29 @@ body {
     height: auto;
     background-color: var(--bg);
     min-height: 600px;
+    transition: background-color 0.5s;
+
 }
 
 nav {
     position: sticky;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     flex-direction: row;
     top: 0;
     padding: 0 8px 0 8px;
     overflow: hidden;
     transition: 0.2s;
-    width: 100%;
     height: 42px;
     background-color: var(--bg);
     z-index: 1;
+    transition: background-color 0.5s;
 }
 
 p {
     font-family: product-sans;
 }
-
-/*button {
-    font-family: product-sans, sans-serif; 
-    padding: 10px 20px; 
-    font-size: 16px; 
-    cursor: pointer;
-}*/
 
 #content {
     display: flex;
@@ -113,6 +111,7 @@ p {
     transition: 0.2s;
     position: relative;
     margin-bottom: 120px;   
+    transition: background-color 0.5s;
 }
 
 #forms-frame {
@@ -145,6 +144,7 @@ p {
     background: var(--bg2);
     top: 30px;
     visibility: hidden;
+    transition: background-color 0.5s;
 }
 
 #add-answer:hover>.selector-popup {
@@ -163,6 +163,8 @@ p {
     align-items: center;
     border: solid 1px var(--bg2);
     border-radius: 6px;
+    transition: background-color 0.5s;
+
 }
 
 .selector-option:hover {
@@ -186,6 +188,8 @@ p {
     font-family: 'product-sans';
     text-align: center;
     color: var(--text);
+    transition: background-color 0.5s;
+
 }
 
 input::-webkit-input-placeholder {
@@ -236,6 +240,8 @@ input::-webkit-inner-spin-button {
     justify-content: flex-start;
     align-items: center;
     margin: auto;
+    transition: background-color 0.5s;
+
 }
 
 #status {
@@ -305,6 +311,8 @@ input::-webkit-inner-spin-button {
     align-items: center;
     position: relative;
     margin-bottom: 20px;
+    transition: background-color 0.5s;
+
 }
 
 #submitForm:hover {
@@ -373,4 +381,57 @@ input::-webkit-inner-spin-button {
     font-family: 'product-sans';
     padding-left: 6px;
     color: var(--text);
+    transition: background-color 0.5s;
+}
+
+.day-night-icon {
+    stroke: var(--text);
+    stroke-width: 1.5;
+    width: 30px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    position: absolute;
+    transition: all 0.5s ease-out;
+
+}
+
+#moon {
+    stroke-width: 1;
+}
+
+#sun {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(20%) rotateZ(50deg);
+}
+
+.moon-animated {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(20%) rotateZ(50deg);
+    transition: all 0.5s ease-out;
+}
+
+.sun-animated {
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translateY(0) rotateZ(0deg) !important;
+    transition: all 0.5s ease-out;
+}
+
+#day-night-container {
+    position: relative;
+    height: 40px;
+    width: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#logo-container {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    height: 42px;
 }

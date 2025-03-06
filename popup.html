@@ -8,8 +8,18 @@
     <link rel="stylesheet" href="popup.css">
 </head>
 <nav id="nav-bar">
-  <img id="logo" src="images/logo_128.png">
-  <p id="title-text"><span class="bold">Google</span> Fakes</p>
+  <div id="logo-container">
+    <img id="logo" src="images/logo_128.png">
+    <p id="title-text"><span class="bold">Google</span> Fakes</p>
+  </div>
+  <div id="day-night-container">
+    <svg viewBox="0 0 20 20" class="day-night-icon" id="moon">
+      <path d="M16.596 7.501H13.716M15.156 6.061V8.941M11.316 4.621H13.236M12.276 3.661V5.581M15.423 11.304A.241.241 90 0 1 15.426 11.448 5.761 5.761 90 1 1 8.326 4.352.24 .24 90 0 1 8.626 4.652 5.282 5.282 90 0 0 15.122 11.151.24 .24 90 0 1 15.423 11.304"/>
+    </svg>
+    <svg viewBox="0 0 24 24" class="day-night-icon" id="sun">
+      <path d="M12 4V6M12 8A1 1 0 0 0 12 16 1 1 0 0 0 12 8M16.5 7.5 18 6M18 12H20M18 18 16.5 16.5M12 20V18M6 18 7.5 16.5M4 12H6M6 6 7.5 7.5"/>
+    </svg>
+  </div>
 </nav>
 <body>
   <div id="content">
@@ -24,16 +34,6 @@
       </div>
     </div>
     <div id="forms-frame">
-      <!--<div class="frame-element">
-        <p class="id-number">1</p>
-        <p>Gaussian Distribution</p>
-        <div class="input-container">
-          <input class="input-field" type="number">
-          <input class="input-field" type="number">
-          <button id="p-add-button" class="add-button">+</button>
-        </div>
-        <button id="p-delete-button" class="delete-button">x</button>
-      </div>-->
       <div class="button" id="add-answer">
         <p class="text">Add answer sheet</p>
         <svg viewBox="0 0 16 16" fill="none" class="add-button"><path d="M 8 2 L 8 14 M 2 8 L 14 8"></path></svg>
