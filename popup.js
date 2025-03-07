@@ -54,38 +54,21 @@ function setTheme(theme) {
     save();
 }
 
-function save() {
-    readData();
-    localStorage.setItem('theme', document.documentElement.getAttribute('data-UIStyle'));
-    var utils = {}
-    utils.url = (document.getElementById('input-url').value) || undefined;
-    utils.amount = (document.getElementById('input-amount').value) || undefined;
-    localStorage.setItem('utils', JSON.stringify(utils));
-    if (order.length > 1) {
-        var temp = order.toSpliced(0,1);
-        localStorage.setItem('order', JSON.stringify(temp));
-    }
-    console.info('Data saved');
-}
 
 function load() {
     var utils = JSON.parse(localStorage.getItem('utils'));
     var theme = (localStorage.getItem('theme') === "light") ? 'dark' : 'light';
-    setTheme(theme);
     if (utils) {
         document.getElementById('input-url').value = utils.url || '';
         document.getElementById('input-amount').value = utils.amount || '';
     }
     if (localStorage.getItem('order')) {
         var anwsers = JSON.parse(localStorage.getItem('order'));
-        console.log(anwsers);
         anwsers.forEach((e) => {
             addAnswerPopup(e.type);
             var elements = document.getElementById(e.id).children[1].children[1].children;
             var inputContainer = document.getElementById(e.id).children[1].children[1];
             var amountOfFields = inputContainer.querySelectorAll('.input-field').length;
-            console.log(e.params.length);
-            console.log(amountOfFields);
             if (e.params.length !== amountOfFields) {
                 for (var i = 0; i < e.params.length-amountOfFields; i++) {
                     var click = new MouseEvent('click',{bubbles:false});
@@ -97,6 +80,23 @@ function load() {
             }
         });
     }
+    setTheme(theme);
+}
+
+function save() {
+    readData();
+    localStorage.setItem('theme', document.documentElement.getAttribute('data-UIStyle'));
+    var utils = {}
+    utils.url = (document.getElementById('input-url').value) || undefined;
+    utils.amount = (document.getElementById('input-amount').value) || undefined;
+    localStorage.setItem('utils', JSON.stringify(utils));
+    if (order.length > 1) {
+        var temp = order.toSpliced(0,1);
+        localStorage.setItem('order', JSON.stringify(temp));
+    } else {
+        localStorage.setItem('order',[]);
+    }
+    console.info('Data saved');
 }
 
 function readData() {
