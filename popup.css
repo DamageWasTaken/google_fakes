@@ -13,6 +13,7 @@
     --purple: #7249B9;
     --red: #C9372C;
     --green: #22A06B;
+    --orange: #F38A3F;
     user-select: none;
 }
 
@@ -21,6 +22,7 @@
     --accent: #b7b7b7;
     --bg2: #ebebeb;
     --text: #292929;
+    --gray: #a3a3a3;
 }
 
 :root[data-UIStyle="dark"] {
@@ -28,6 +30,7 @@
     --accent: #161A1D;
     --bg2: #333333;
     --text: #F7F8F9;
+    --gray: #474747;
 }
 
 ::selection {
@@ -129,6 +132,22 @@ p {
 
 .bold {
     font-family: product-sans-bold, sans-serif; 
+    color: var(--text);
+    user-select: none;
+}
+
+.error {
+    color: var(--red);
+    user-select: text;
+}
+
+.medium {
+    color: var(--orange);
+    user-select: text;
+}
+
+.success {
+    color: var(--green);
 }
 
 .selector-popup {
@@ -250,6 +269,12 @@ input[type=number] {
 
 #status {
     margin: 0;
+    font-variant-ligatures: none;
+    font-family: 'product-sans-bold';
+}
+
+#status::selection {
+    background-color: white;
 }
 
 .frame-element {
@@ -282,6 +307,15 @@ input[type=number] {
     width: 20px;
     stroke-width: 2px;
     stroke: var(--green);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.minus-button {
+    width: 20px;
+    height: 35px;
+    stroke-width: 2px;
+    stroke: var(--red);
     stroke-linecap: round;
     stroke-linejoin: round;
 }
@@ -451,18 +485,25 @@ input[type=number] {
 }
 
 .gaussian>:first-child {
-    grid-column-start: 2;
+    grid-column-start: 2 !important;
 }
 
 .multi-random>:first-child {
-    grid-column-start: 3;
+    grid-column-start: 3 !important;
 }
 
 .random>:first-child {
-    grid-column-start: 4;
+    grid-column-start: 4 !important;
 }
 
-.input-element:nth-last-child(1):nth-child(6n) {
+
+.input-element:nth-last-child(2):nth-child(5n+1) {
+    grid-column-start: 5;
+    height: 20px;
+    padding-top: 7.5px;
+}
+
+.input-element:nth-last-child(1):nth-child(5n+1) {
     grid-column-start: 5;
     grid-column-end: span 2;
     width: 42.55px;
@@ -470,18 +511,24 @@ input[type=number] {
     padding-top: 7.5px;
 }
 
-.input-field:nth-last-child(2):nth-child(6n) {
+.input-field:nth-last-child(3):nth-child(5n+1) {
     grid-column-start: 5;
 }
 
-.input-field:nth-last-child(3):nth-child(6n), .input-field:nth-last-child(n+3):nth-last-child(-n+3):first-child {
+/*For 2 elements*/
+.input-field:nth-last-child(4):nth-child(5n+1), .biased .input-field:nth-last-child(n+4):nth-last-child(-n+4):first-child {
     grid-column-start: 4;
 }
 
-.input-field:nth-last-child(4):nth-child(6n), .input-field:nth-last-child(n+4):nth-last-child(-n+4):first-child {
+.input-field:nth-last-child(5):nth-child(5n+1), .biased .input-field:nth-last-child(n+5):nth-last-child(-n+5):first-child {
     grid-column-start: 3;
 }
 
-.input-container:has(.add-button) .input-field:nth-last-child(5):nth-child(6n), .input-field:nth-last-child(n+5):nth-last-child(-n+5):first-child{
+.input-field:nth-last-child(6):nth-child(5n+1), .biased .input-field:nth-last-child(n+6):nth-last-child(-n+6):first-child{
     grid-column-start: 2;
+}
+
+.unavailable {
+    pointer-events: none;
+    stroke: var(--gray);
 }

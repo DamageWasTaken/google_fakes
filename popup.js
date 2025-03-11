@@ -8,16 +8,22 @@ window.onload = () => {
         save();
     });
     document.getElementById("submitForm").addEventListener("click", () => {
-        document.getElementById("status").textContent = "Submitting...";
+        var status = document.getElementById("status");
+        status.classList.remove('success','error','medium');
+        status.innerHTML = `<span class="bold">Status: </span>Submitting...`;
         readData();
         chrome.runtime.sendMessage({ action: "submitForm", answer:order }, (response) => {
             if (chrome.runtime.lastError) {
-                console.error("Error:", chrome.runtime.lastError.message);
-                document.getElementById("status").textContent = "Status: Error sending request";
+                //console.error("Error:", chrome.runtime.lastError.message);
+                status.classList.add('medium');
+                status.innerHTML = `<span class="bold">Status: </span>Error sending request`;
             } else if (response && response.success) {
-                document.getElementById("status").textContent = "Status: Form submitted successfully";
+                status.classList.add('success');
+                status.innerHTML = `<span class="bold">Status: </span>Form submitted successfully`;
+                setTextAfterTimeout(status,4000,`<span class="bold">Status: </span> ready`);
             } else {
-                document.getElementById("status").textContent = "Status: Failed to submit";
+                status.classList.add('error');
+                status.innerHTML = `<span class="bold">Status: </span>${response.error.slice(1,response.error.length-1)}`;
             }
         });
     });
@@ -29,7 +35,15 @@ window.onload = () => {
     });
 };
 
+function handleFirstClick(e) {
+    e = e.target;
+	e.value = '0%';
+	e.setSelectionRange(1,1);
+	e.removeEventListener("click", handleFirstClick);
+}
+
 function handlePercent(e) {
+    e = e.target;
 	//Get the value without the percent (%) sign
 	var inputValue = Number(e.value.slice(0, e.value.length - 1)) || 0;
 
@@ -49,6 +63,7 @@ function handlePercent(e) {
 	}
 	e.value = value + "%";
 	e.setSelectionRange(e.value.length - 1,e.value.length - 1);
+    save();
 }
 
 window.onscroll = function() {scrollFunction()};
@@ -76,6 +91,12 @@ function setTheme(theme) {
     save();
 }
 
+function setTextAfterTimeout(element, timeoutms, text) {
+    setTimeout(() => {
+        element.innerHTML = text;
+        element.classList.remove('success','error','medium');
+    }, timeoutms);
+}
 
 function load() {
     var utils = JSON.parse(localStorage.getItem('utils'));
@@ -88,23 +109,28 @@ function load() {
         var anwsers = JSON.parse(localStorage.getItem('order'));
         anwsers.forEach((e) => {
             addAnswerPopup(e.type);
-            var elements = document.getElementById(e.id).children[1].children[1].children;
-            var inputContainer = document.getElementById(e.id).children[1].children[1];
-            var amountOfFields = inputContainer.querySelectorAll('.input-field').length;
-            if (e.params.length !== amountOfFields) {
-                for (var i = 0; i < e.params.length-amountOfFields; i++) {
-                    var click = new MouseEvent('click',{bubbles:false});
-                    elements[elements.length-1].dispatchEvent(click);
+            if(e.type !== 'none') {
+                var elements = document.getElementById(e.id).children[1].children[1].children;
+                var inputContainer = document.getElementById(e.id).children[1].children[1];
+                var amountOfFields = inputContainer.querySelectorAll('.input-field').length;
+                if (e.params.length !== amountOfFields) {
+                    for (var i = 0; i < e.params.length-amountOfFields; i++) {
+                        var click = new MouseEvent('click',{bubbles:false});
+                        elements[elements.length-1].dispatchEvent(click);
+                    }
                 }
-            }
-            if (e.type === 'multi_biased' || e.type === 'biased') {
-                for (var i = 0; i < elements.length; i++) {
-                    var value = e.params[i] + '%';
-                    elements[i].value = value;
-                }
-            } else {
-                for (var i = 0; i < elements.length; i++) {
-                    elements[i].value = e.params[i];
+                if (e.type === 'multi_biased' || e.type === 'biased') {
+                    for (var i = 0; i < elements.length; i++) {
+                        if (e.params[i] === null) {
+                            continue;
+                        }
+                        var value = e.params[i] + '%';
+                        elements[i].value = value;
+                    }
+                } else {
+                    for (var i = 0; i < elements.length; i++) {
+                        elements[i].value = e.params[i];
+                    }
                 }
             }
         });
@@ -179,6 +205,7 @@ function addAnswerPopup(answerType) {
     var id = parentDiv.children.length;
     var deleteicon = '<svg class="delete-button delete-icon" viewBox="4 4 8 8"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/></svg>';
     var addicon = '<svg viewBox="0 0 16 16" fill="none" class="add-button input-element"><path d="M 8 2 L 8 14 M 2 8 L 14 8"></path></svg>'
+    var minusicon = '<svg viewBox="0 0 16 16" fill="none" class="minus-button input-element unavailable"><path d="M3.2 3.2 12.8 12.8M10.4 5.6 12.8 3.2M5.6 10.4 3.2 12.8"></path></svg>'
     wrapper.classList.add('frame-element');
     wrapper.id = id;
     switch (answerType) {
@@ -189,12 +216,29 @@ function addAnswerPopup(answerType) {
             break;
         case 'Biased Random':
         case 'biased':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Biased Random</p><div class="input-container biased"><input class="input-field input-element percent" type="text" value="0%" maxlength="5"><input class="input-field input-element percent" type="text" value="0%" maxlength="5">${addicon}</div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Biased Random</p><div class="input-container biased"><input class="input-field input-element percent" type="text" maxlength="5" placeholder="0%"><input class="input-field input-element percent" type="text" maxlength="5" placeholder="0%">${addicon}${minusicon}</div></div>${deleteicon}`;
             wrapper.children[1].children[1].children[2].addEventListener('click', function() {
-                var siblings = this.parentElement.children
-                this.insertAdjacentHTML('beforebegin','<input class="input-field input-element percent" type="text" value="0%" maxlength="5">');
-                if (siblings.length > 10) {
-                    siblings[siblings.length-1].remove();
+                var element = document.createElement('input');
+                element.classList.add('input-field', 'input-element', 'percent');
+                element.setAttribute('type','text');
+                element.setAttribute('maxlength', 5);
+                element.setAttribute('placeholder', '0%');
+                element.addEventListener('click', handleFirstClick);
+                element.addEventListener('input', handlePercent);
+                this.parentElement.insertBefore(element, this);
+                this.nextElementSibling.classList.remove('unavailable');
+                var siblings = this.parentElement.children;
+                if (siblings.length > 51) {
+                    this.classList.add('unavailable');
+                }
+                save();
+            });
+            wrapper.children[1].children[1].children[3].addEventListener('click', function() {
+                this.previousElementSibling.previousElementSibling.remove();
+                this.previousElementSibling.classList.remove('unavailable');
+                var siblings = this.parentElement.children;
+                if (siblings.length < 5) {
+                    this.classList.add('unavailable');
                 }
                 save();
             });
@@ -202,12 +246,29 @@ function addAnswerPopup(answerType) {
             break;
         case 'Multi Biased Random':
         case 'multi_biased':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Multi Biased Random</p><div class="input-container biased"><input class="input-field input-element percent" type="text" value="0%" maxlength="5"><input class="input-field input-element percent" type="text" value="0%" maxlength="5">${addicon}</div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Multi Biased Random</p><div class="input-container biased"><input class="input-field input-element percent" type="text" maxlength="5" placeholder="0%"><input class="input-field input-element percent" type="text" maxlength="5" placeholder="0%">${addicon}${minusicon}</div></div>${deleteicon}`;
             wrapper.children[1].children[1].children[2].addEventListener('click', function() {
-                var siblings = this.parentElement.children
-                this.insertAdjacentHTML('beforebegin','<input class="input-field input-element percent" type="text" value="0%">');
-                if (siblings.length > 10) {
-                    siblings[siblings.length-1].remove();
+                var element = document.createElement('input');
+                element.classList.add('input-field', 'input-element', 'percent');
+                element.setAttribute('type','text');
+                element.setAttribute('maxlength', 5);
+                element.setAttribute('placeholder', '0%');
+                element.addEventListener('click', handleFirstClick);
+                element.addEventListener('input', handlePercent);
+                this.parentElement.insertBefore(element, this);
+                this.nextElementSibling.classList.remove('unavailable');
+                var siblings = this.parentElement.children;
+                if (siblings.length > 51) {
+                    this.classList.add('unavailable');
+                }
+                save();
+            });
+            wrapper.children[1].children[1].children[3].addEventListener('click', function() {
+                this.previousElementSibling.previousElementSibling.remove();
+                this.previousElementSibling.classList.remove('unavailable');
+                var siblings = this.parentElement.children;
+                if (siblings.length < 5) {
+                    this.classList.add('unavailable');
                 }
                 save();
             });
@@ -242,6 +303,8 @@ function addAnswerPopup(answerType) {
         deletedElement();
         save();
     });
+    wrapper.querySelectorAll(".percent").forEach((e) => e.addEventListener("click", handleFirstClick));
+    wrapper.querySelectorAll(".percent").forEach((e) => e.addEventListener("input", handlePercent));
     parentDiv.insertBefore(wrapper,targetElement);
     answer.id = order.length
     answer.params = [];
@@ -251,8 +314,5 @@ function addAnswerPopup(answerType) {
         left: 0,
         behavior: "smooth",
     });
-    document.querySelectorAll("#forms-frame .percent").forEach((e) => e.addEventListener("input", function() {
-        handlePercent(this);
-    }));
     save();
 }

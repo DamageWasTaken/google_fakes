@@ -36,13 +36,9 @@ function submitFormResponse(answers) {
           })
           .then(response => response.json())
           .then(data => {
-            console.log("API Response:", data);
-            console.log("API Response (JSON):", JSON.stringify(data, null, 2));
               if (data.error) {
-                  console.error("Script error:", data.error.details);
-                  reject(new Error("Script execution failed"));
+                  reject(new Error(JSON.stringify(data.error.details[0].errorMessage)));
               } else {
-                  console.log("Form submission success:", data);
                   resolve(data);
               }
           })
