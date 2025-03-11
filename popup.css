@@ -172,11 +172,11 @@ p {
 }
 
 .input-container {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    column-gap: 3px;
+    display: grid;
+    gap: 3px;
     position: relative;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: auto;
 }
 
 .input-field {
@@ -189,6 +189,7 @@ p {
     text-align: center;
     color: var(--text);
     transition: background-color 0.5s;
+    grid-column-end: span 2;
 
 }
 
@@ -208,10 +209,14 @@ input::-moz-placeholder{
     font-family: product-sans;
 }
 
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .id-number {
@@ -282,9 +287,8 @@ input::-webkit-inner-spin-button {
 }
 
 .input-container>.add-button {
-    right: -25px;
-    position: absolute;
     padding: 0;
+    height: 35px;
 }
 
 .delete-button:hover {
@@ -444,4 +448,40 @@ input::-webkit-inner-spin-button {
     height: 25%;
     bottom: 0;
     pointer-events: none;
+}
+
+.gaussian>:first-child {
+    grid-column-start: 2;
+}
+
+.multi-random>:first-child {
+    grid-column-start: 3;
+}
+
+.random>:first-child {
+    grid-column-start: 4;
+}
+
+.input-element:nth-last-child(1):nth-child(6n) {
+    grid-column-start: 5;
+    grid-column-end: span 2;
+    width: 42.55px;
+    height: 20px;
+    padding-top: 7.5px;
+}
+
+.input-field:nth-last-child(2):nth-child(6n) {
+    grid-column-start: 5;
+}
+
+.input-field:nth-last-child(3):nth-child(6n), .input-field:nth-last-child(n+3):nth-last-child(-n+3):first-child {
+    grid-column-start: 4;
+}
+
+.input-field:nth-last-child(4):nth-child(6n), .input-field:nth-last-child(n+4):nth-last-child(-n+4):first-child {
+    grid-column-start: 3;
+}
+
+.input-container:has(.add-button) .input-field:nth-last-child(5):nth-child(6n), .input-field:nth-last-child(n+5):nth-last-child(-n+5):first-child{
+    grid-column-start: 2;
 }

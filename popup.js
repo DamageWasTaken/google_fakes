@@ -21,13 +21,35 @@ window.onload = () => {
             }
         });
     });
-    document.getElementById("add-answer").querySelectorAll(".selector-option").forEach((e) => e.addEventListener("click", function() {
+    document.getElementById("add-answer").querySelectorAll(".selector-popup .selector-option").forEach((e) => e.addEventListener("click", function() {
         addAnswerPopup(this.innerText);
     }));
     document.getElementById("day-night-container").addEventListener('click', function() {
         setTheme();
     });
 };
+
+function handlePercent(e) {
+	//Get the value without the percent (%) sign
+	var inputValue = Number(e.value.slice(0, e.value.length - 1)) || 0;
+
+	var value = inputValue;
+	//Ensures numbers with trailing decimal don't get deleted
+	if (e.value.includes('.')) {
+		value = e.value.slice(0, e.value.length - 1);
+	}
+	//Add decimal point to values over 100
+	if (inputValue > 100 && !e.value.includes('.')) {
+		//First part before decimal
+		var first = e.value.slice(0, 2);
+		//Last part after the decimal
+		var last = e.value.slice(2, e.value.length - 1);
+		//Setting the decimal point
+		value = Number(first + '.' + last);
+	}
+	e.value = value + "%";
+	e.setSelectionRange(e.value.length - 1,e.value.length - 1);
+}
 
 window.onscroll = function() {scrollFunction()};
 
@@ -75,8 +97,15 @@ function load() {
                     elements[elements.length-1].dispatchEvent(click);
                 }
             }
-            for (var i = 0; i < elements.length; i++) {
-                elements[i].value = e.params[i];
+            if (e.type === 'multi_biased' || e.type === 'biased') {
+                for (var i = 0; i < elements.length; i++) {
+                    var value = e.params[i] + '%';
+                    elements[i].value = value;
+                }
+            } else {
+                for (var i = 0; i < elements.length; i++) {
+                    elements[i].value = e.params[i];
+                }
             }
         });
     }
@@ -109,18 +138,23 @@ function readData() {
     resetObjects(order);
     formsFrame.querySelectorAll("#forms-frame .input-field").forEach((e) => {
         var index = [ ...formsFrame.children ].indexOf(e.parentElement.parentElement.parentElement)+1;
-        var value = (e.value)? Number(e.value) : null;
+        var value;
+        if (e.value.includes('%')) {
+            value = e.value.slice(0, e.value.length - 1)? Number(e.value.slice(0, e.value.length - 1)) : null;
+        } else {
+            value = (e.value)? Number(e.value) : null;
+        }
         order[index].params.push(value);
     });
 }
 
 function scrollFunction() {
     if (document.body.scrollTop >= 10 || document.documentElement.scrollTop >= 10) {
-        document.getElementById("nav-bar").style.height = "30px";
+        document.getElementById("logo-container").style.height = "30px";
         document.getElementById("title-text").style.fontSize = "12px";
         document.getElementById("day-night-container").style.height = "30px";
     } else {
-        document.getElementById("nav-bar").style.height = "42px";
+        document.getElementById("logo-container").style.height = "42px";
         document.getElementById("title-text").style.fontSize = "22px";
         document.getElementById("day-night-container").style.height = "40px";
     }
@@ -144,22 +178,22 @@ function addAnswerPopup(answerType) {
     var wrapper = document.createElement('div');
     var id = parentDiv.children.length;
     var deleteicon = '<svg class="delete-button delete-icon" viewBox="4 4 8 8"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/></svg>';
-    var addicon = '<svg viewBox="0 0 16 16" fill="none" class="add-button"><path d="M 8 2 L 8 14 M 2 8 L 14 8"></path></svg>'
+    var addicon = '<svg viewBox="0 0 16 16" fill="none" class="add-button input-element"><path d="M 8 2 L 8 14 M 2 8 L 14 8"></path></svg>'
     wrapper.classList.add('frame-element');
     wrapper.id = id;
     switch (answerType) {
         case 'Gaussian Distribution':
         case 'gaussian':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text" >Gaussian Distrubution</p><div class="input-container"><input class="input-field" placeholder="Mean" type="number"><input class="input-field" placeholder="Stdev" type="number"><input class="input-field" placeholder="Min" type="number"><input class="input-field" placeholder="Max" type="number"></div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text" >Gaussian Distrubution</p><div class="input-container gaussian"><input class="input-field" placeholder="Min" type="number"><input class="input-field" placeholder="Max" type="number"><input class="input-field" placeholder="Mean" type="number"><input class="input-field" placeholder="Stdev" type="number"></div></div>${deleteicon}`;
             answer.type = "gaussian";
             break;
         case 'Biased Random':
         case 'biased':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Biased Random</p><div class="input-container"><input class="input-field" type="number"><input class="input-field" type="number">${addicon}</div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Biased Random</p><div class="input-container biased"><input class="input-field input-element percent" type="text" value="0%" maxlength="5"><input class="input-field input-element percent" type="text" value="0%" maxlength="5">${addicon}</div></div>${deleteicon}`;
             wrapper.children[1].children[1].children[2].addEventListener('click', function() {
                 var siblings = this.parentElement.children
-                this.insertAdjacentHTML('beforebegin','<input class="input-field" type="number">');
-                if (siblings.length > 6) {
+                this.insertAdjacentHTML('beforebegin','<input class="input-field input-element percent" type="text" value="0%" maxlength="5">');
+                if (siblings.length > 10) {
                     siblings[siblings.length-1].remove();
                 }
                 save();
@@ -168,11 +202,11 @@ function addAnswerPopup(answerType) {
             break;
         case 'Multi Biased Random':
         case 'multi_biased':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Multi Biased Random</p><div class="input-container"><input class="input-field" type="number"><input class="input-field" type="number">${addicon}</div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text">Multi Biased Random</p><div class="input-container biased"><input class="input-field input-element percent" type="text" value="0%" maxlength="5"><input class="input-field input-element percent" type="text" value="0%" maxlength="5">${addicon}</div></div>${deleteicon}`;
             wrapper.children[1].children[1].children[2].addEventListener('click', function() {
                 var siblings = this.parentElement.children
-                this.insertAdjacentHTML('beforebegin','<input class="input-field" type="number">');
-                if (siblings.length > 6) {
+                this.insertAdjacentHTML('beforebegin','<input class="input-field input-element percent" type="text" value="0%">');
+                if (siblings.length > 10) {
                     siblings[siblings.length-1].remove();
                 }
                 save();
@@ -181,12 +215,12 @@ function addAnswerPopup(answerType) {
             break;
         case 'Random':
         case 'random':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text" >Random</p><div class="input-container"><input class="input-field" placeholder="Min" type="number"><input class="input-field" placeholder="Max" type="number"></div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text" >Random</p><div class="input-container random"><input class="input-field" placeholder="Min" type="number"><input class="input-field" placeholder="Max" type="number"></div></div>${deleteicon}`;
             answer.type = "random";
             break;
         case 'Multi Random':
         case 'multi_random':
-            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text" >Multi Random</p><div class="input-container"><input class="input-field" placeholder="Min" type="number"><input class="input-field" placeholder="Max" type="number"><input class="input-field" placeholder="Qty" type="number"></div></div>${deleteicon}`;
+            wrapper.innerHTML = `<p class="id-number">${id}</p><div class="container"><p class="answer-text" >Multi Random</p><div class="input-container multi-random"><input class="input-field" placeholder="Min" type="number"><input class="input-field" placeholder="Max" type="number"><input class="input-field" placeholder="Qty" type="number"></div></div>${deleteicon}`;
             answer.type = "multi_random";
             break;
         case 'Blank':
@@ -217,5 +251,8 @@ function addAnswerPopup(answerType) {
         left: 0,
         behavior: "smooth",
     });
+    document.querySelectorAll("#forms-frame .percent").forEach((e) => e.addEventListener("input", function() {
+        handlePercent(this);
+    }));
     save();
 }
