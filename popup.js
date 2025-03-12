@@ -4,10 +4,10 @@ var order = [{type:"utils"}];
 window.onload = () => {
     load();
     save();
-    document.addEventListener('change', function() {
-        save();
+    document.addEventListener('change', save);
+    document.getElementById('forms-frame').addEventListener('change', function() {
         document.getElementById('clear-button').classList.remove('hidden');
-    });
+    })
     document.getElementById("submitForm").addEventListener("click", () => {
         var status = document.getElementById("status");
         status.classList.remove('success','error','medium');
@@ -141,7 +141,7 @@ function load() {
                 if (e.params.length !== amountOfFields) {
                     for (var i = 0; i < e.params.length-amountOfFields; i++) {
                         var click = new MouseEvent('click',{bubbles:false});
-                        elements[elements.length-1].dispatchEvent(click);
+                        elements[elements.length-2].dispatchEvent(click);
                     }
                 }
                 if (e.type === 'multi_biased' || e.type === 'biased') {
