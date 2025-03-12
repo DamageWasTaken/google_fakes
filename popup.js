@@ -4,8 +4,9 @@ var order = [{type:"utils"}];
 window.onload = () => {
     load();
     save();
-    document.addEventListener('change', () => {
+    document.addEventListener('change', function() {
         save();
+        document.getElementById('clear-button').classList.remove('hidden');
     });
     document.getElementById("submitForm").addEventListener("click", () => {
         var status = document.getElementById("status");
@@ -30,16 +31,18 @@ window.onload = () => {
     document.getElementById("add-answer").querySelectorAll(".selector-popup .selector-option").forEach((e) => e.addEventListener("click", function() {
         addAnswerPopup(this.innerText);
     }));
-    document.getElementById("day-night-container").addEventListener('click', function() {
-        setTheme();
-    });
+    document.getElementById("day-night-container").addEventListener('click', setTheme);
+    document.getElementById('delete-button').addEventListener('click', deleteAll);
+    document.getElementById('clear-button').addEventListener('click', clearAll);
 };
 
 function handleFirstClick(e) {
+    document.getElementById('clear-button').classList.remove('hidden');
     e = e.target;
 	e.value = '0%';
 	e.setSelectionRange(1,1);
 	e.removeEventListener("click", handleFirstClick);
+    save();
 }
 
 function handlePercent(e) {
@@ -63,7 +66,6 @@ function handlePercent(e) {
 	}
 	e.value = value + "%";
 	e.setSelectionRange(e.value.length - 1,e.value.length - 1);
-    save();
 }
 
 window.onscroll = function() {scrollFunction()};
@@ -78,7 +80,10 @@ function resetObjects(array) {
 }
 
 function setTheme(theme) {
-    theme = theme || document.documentElement.getAttribute('data-UIStyle')
+    if (typeof theme !== 'string') {
+        theme = undefined;
+    }
+    theme = theme || document.documentElement.getAttribute('data-UIStyle');
     if (theme === "dark") {
         document.documentElement.setAttribute('data-UIStyle',"light");
         document.getElementById('moon').classList.add('moon-animated');
@@ -98,6 +103,26 @@ function setTextAfterTimeout(element, timeoutms, text) {
     }, timeoutms);
 }
 
+function clearAll() {
+    document.getElementById('clear-button').classList.add('hidden');
+    var elements = document.querySelectorAll('#forms-frame .input-field');
+    console.log(elements);
+    elements.forEach((e) => {
+        e.value = '';
+    });
+    save();
+}
+
+function deleteAll() {
+    document.getElementById('delete-button').classList.add('hidden');
+    var elements = document.querySelectorAll('#forms-frame .delete-button');
+    elements.forEach((e) => {
+        var click = new MouseEvent('click',{bubbles:false});
+        e.dispatchEvent(click);
+    });
+    save();
+}
+
 function load() {
     var utils = JSON.parse(localStorage.getItem('utils'));
     var theme = (localStorage.getItem('theme') === "light") ? 'dark' : 'light';
@@ -109,7 +134,7 @@ function load() {
         var anwsers = JSON.parse(localStorage.getItem('order'));
         anwsers.forEach((e) => {
             addAnswerPopup(e.type);
-            if(e.type !== 'none') {
+            if (e.type !== 'none') {
                 var elements = document.getElementById(e.id).children[1].children[1].children;
                 var inputContainer = document.getElementById(e.id).children[1].children[1];
                 var amountOfFields = inputContainer.querySelectorAll('.input-field').length;
@@ -121,15 +146,20 @@ function load() {
                 }
                 if (e.type === 'multi_biased' || e.type === 'biased') {
                     for (var i = 0; i < elements.length; i++) {
-                        if (e.params[i] === null) {
+                        if (e.params[i] === null || e.params[i] === undefined) {
                             continue;
                         }
                         var value = e.params[i] + '%';
                         elements[i].value = value;
+                        document.getElementById('clear-button').classList.remove('hidden');
                     }
                 } else {
                     for (var i = 0; i < elements.length; i++) {
+                        if (e.params[i] === null || e.params[i] === undefined) {
+                            continue;
+                        }
                         elements[i].value = e.params[i];
+                        document.getElementById('clear-button').classList.remove('hidden');
                     }
                 }
             }
@@ -194,10 +224,15 @@ function deletedElement() {
         parentDiv.children[i].children[0].innerText = i+1;
         order[i+1].id = i+1;
     }
+    if (parentDiv.children.length < 2) {
+        document.getElementById('delete-button').classList.add('hidden');
+        document.getElementById('clear-button').classList.add('hidden');
+    }
     readData();
 }
 
 function addAnswerPopup(answerType) {
+    document.getElementById('delete-button').classList.remove('hidden');
     var answer = {}
     var targetElement = document.getElementById('add-answer');
     var parentDiv = document.getElementById('forms-frame');
