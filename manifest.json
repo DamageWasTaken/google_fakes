@@ -1,7 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Google Fakes",
-  "version": "1.0",
+  "version": "2.0",
+  "author": "Lucas Steele Sørensen",
+  "description": "Answer Google Forms from anywhere you would like without opening the Google Forms.",
   "host_permissions": [
     "https://www.googleapis.com/*"
   ],

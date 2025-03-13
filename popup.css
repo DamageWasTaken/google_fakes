@@ -336,6 +336,10 @@ input[type=number] {
     transform: scale(1.05);
 }
 
+.input-container>.minus-button:hover {
+    transform: scale(1.05);
+}
+
 #submitForm {
     display: flex;
     width: 80%;
@@ -433,7 +437,10 @@ input[type=number] {
     fill: none;
     position: absolute;
     transition: all 0.5s ease-out;
+}
 
+.day-night-icon:hover {
+    transform: scale(1.05);
 }
 
 #moon {
@@ -557,6 +564,10 @@ input[type=number] {
     border-radius: 6px;
     font-family: 'product-sans-bold';
     font-size: 12px;
+}
+
+.clear-buttons:hover {
+    transform: scale(1.01);
 }
 
 .hidden {
