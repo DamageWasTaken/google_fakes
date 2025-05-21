@@ -3,7 +3,7 @@
   "name": "Google Fakes",
   "version": "2.0",
   "author": "Lucas Steele Sørensen",
-  "description": "Answer Google Forms from anywhere you would like without opening the Google Forms.",
+  "description": "Tired of filling out forms? Get Google Fakes to do it for you.",
   "host_permissions": [
     "https://www.googleapis.com/*"
   ],
