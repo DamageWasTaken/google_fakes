@@ -1,0 +1,13 @@
+{
+  "name": "nodejs-google-fakes",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "James P. Ness",
+  "type": "commonjs",
+  "main": "index.js",
+
+  "dependencies": {
+    "selenium-webdriver": "^4.32.0"
+  }
+}
