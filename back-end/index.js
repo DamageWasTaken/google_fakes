@@ -7,16 +7,21 @@ var fs = require('fs');
 
 ////////////////////////////////////////////////
 const answers = [
-  {type: "biased", params: [0]},
-  {type: "biased", params: [0]},
-  {type: "biased", params: [5,10,15,70]},
-  {type: "biased", params: [50,25,15,10]},
-  {type: "multi_biased", params: [50,50,50,50]},
-  {type: "biased", params: [0,50,50,0]},
+  {type: "biased", params: [0,0,100]},
+  {type: "biased", params: [0,0,0,0,0,0,100]},
+  {type: "biased", params: [2,98]},
+  {type: "none"},
+  {type: "gaussian", params: [1,5,5,0.7]},
+  {type: "gaussian", params: [1,4,4,2]},
+  {type: "shortText", params: ["Måske"]},
+  {type: "gaussian", params: [1,10,1,1.2]},
+  {type: "biased", params: [2,96,2]},
+  {type: "none"},
+  {type: "biased", params: [0,100,0]},
 ];
 
-const applicants = 5;
-const URL = 'https://docs.google.com/forms/d/e/1FAIpQLSd86dBJ7EDRN0-HKUNw2dzTjPP9Lj3hIvbQuy7bhIvyxJdZmg/viewform'
+const applicants = 1000;
+const URL = 'https://docs.google.com/forms/d/1IgHc7ILESzujNszs1sz8H07yeGlymOlmhSwcAp1P-54/viewform'
 ///////////////////////////////////////////////
 
 const identifiers ={
@@ -25,7 +30,9 @@ const identifiers ={
   "multipleChoice": 2,
   "rating":18,
   "shortText":0,
-  "longText":1
+  "longText":1,
+  "dropdown":3,
+
 };
 
 function getRandomInt(min, max) {
@@ -232,6 +239,10 @@ function getResponseIndex(ansConfig) {
   }else if(type === "random"){
     const [min, max] = params;
     return getRandomInt(min-1, max-1)
+  } else if (type === "dropdown") {
+    return biased_random(...params);
+  } else if (type === "shortText" || type === "longText") {
+    return params[0];
   } else if(type === "none"){
     return null;
   } else {
@@ -367,7 +378,7 @@ async function submitFakeResponse(answersheet, URL, pup){
           case "scale":
             var scaleChoice = getResponseIndex(ans[step]);
             ErrorCheck(q_data[step].type, ans[step], step, q_data[step].length);
-            let scaleParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+            let scaleParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/span/div'));
             let scale_options = await get_children(scaleParent);
             scale_options = scale_options.slice(1,-1);
             let _scale = await scale_options[scaleChoice];
@@ -378,7 +389,7 @@ async function submitFakeResponse(answersheet, URL, pup){
             var multiChoice = getResponseIndex(ans[step]);
             ErrorCheck(q_data[step].type, ans[step], step, q_data[step].length);
 
-            let multiParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
+            let multiParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'));
             let multi_options = await get_children(multiParent);
             let _multi = await multi_options[multiChoice];
             //console.log(_multi);
@@ -401,20 +412,33 @@ async function submitFakeResponse(answersheet, URL, pup){
             await _rating.click();
             break;
           case "shortText":
-            let shortPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'))
-            await driver.actions()
-            .sendKeys(shortPragraph, 'Fake short response n')
-            .perform()
+            let shortPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
+            await driver.executeScript("arguments[0].scrollIntoView(true);", shortPragraph);
+            await shortPragraph.sendKeys(getResponseIndex(ans[step]));
+            break;
+          case "longText":
+            let longParagraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
+            await driver.executeScript("arguments[0].scrollIntoView(true);", longParagraph);
+            await longParagraph.sendKeys(getResponseIndex(ans[step]));
+            break;
+          case "dropdown":
+            let dropdownChoice = getResponseIndex(ans[step]);
+            let dropDown = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div'));
+            await dropDown.click();
+            await driver.wait(
+              until.elementLocated(By.xpath(`html/body/div[1]/div[2]/form/div[2]/div/div[2]/div[${Number(step)+1}]/div/div/div[2]/div/div[2]/div[3]`)),
+              5000
+            );
+            let choices = await get_children(await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[2]')));
+            await choices[dropdownChoice+2].click();
+            await driver.wait(
+              until.stalenessOf(await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
+              500
+            );
             break;
 
-          case "longText":
-            let longPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'))
-            await driver.actions()
-            .sendKeys(longPragraph, 'Fake long response n')
-            .perform()
-            break;
           default:
-            throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
+            throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`;
         }
       }
 
@@ -422,7 +446,7 @@ async function submitFakeResponse(answersheet, URL, pup){
       let submitButton = await driver.findElement(By.xpath('//*[@id="mG61Hd"]/div[2]/div/div[3]/div/div[1]/div/span'));
       await submitButton.click();
 
-      var return_xpath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a'
+      var return_xpath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a';
 
       await driver.wait(
         until.elementLocated(By.xpath(return_xpath)),
@@ -433,7 +457,7 @@ async function submitFakeResponse(answersheet, URL, pup){
   }
 
   } catch (e) {
-    console.log(e)
+    console.log(e);
   } finally {
     driver.close();
   }
