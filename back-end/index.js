@@ -1,22 +1,31 @@
 const {By, Builder, Browser, until, Capabilities} = require('selenium-webdriver');
 const assert = require("assert");
 const firefox = require('selenium-webdriver/firefox');
+const questionHolder_xpath = '//*[@id="mG61Hd"]/div[2]/div/div[2]';
+var driver;
+
 var fs = require('fs');
 //const { generateKey } = require('crypto');
 //const { Children } = require('react');
 
 ////////////////////////////////////////////////
 const answers = [
-  {type: "biased", params: [0]},
-  {type: "biased", params: [0]},
-  {type: "biased", params: [5,10,15,70]},
-  {type: "biased", params: [50,25,15,10]},
-  {type: "multi_biased", params: [50,50,50,50]},
-  {type: "biased", params: [0,50,50,0]},
+  {type: "biased", params: [100,0,0,0,0]},
+  {type: "biased", params: [0,0,95,5]},
+  {type: "biased", params: [100,0]},
+  {type: "biased", params: [0,100]},
+  {type: "biased", params: [100,0,0,0]},
+  {type: "random", params: [1,2]},
+  {type: "biased", params: [100,0,0]},
+  {type: "biased", params: [100,0,0,0,0,0]},
+  {type: "biased", params: [100,0,0,0,0]},
+  {type: "biased", params: [0,0,0,0,100]},
+  {type: "biased", params: [100,0,0,0,0]},
+  {type: "random", params: [1,2]}
 ];
 
 const applicants = 5;
-const URL = 'https://docs.google.com/forms/d/e/1FAIpQLSd86dBJ7EDRN0-HKUNw2dzTjPP9Lj3hIvbQuy7bhIvyxJdZmg/viewform'
+const URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfVSy4q6FU12oN6aqqTlwNhkzqwAUkUTEVpbXBg3ooUUM57Tg/viewform'
 ///////////////////////////////////////////////
 
 const identifiers ={
@@ -25,7 +34,8 @@ const identifiers ={
   "multipleChoice": 2,
   "rating":18,
   "shortText":0,
-  "longText":1
+  "longText":1,
+  "trickster":-1
 };
 
 function getRandomInt(min, max) {
@@ -38,47 +48,14 @@ function gaussianRandom_ans(min, max, mean, stdev) {
   var dist = [];
   var sum = 0;
   for (var i = min; i<=max; i++){
-
     sum += (1/(stdev*Math.sqrt(2 * Math.PI)))*Math.pow(Math.E, -(1/2)*Math.pow((i-mean)/stdev,2));
-    //console.log(sum)
   }
   for (var i = min; i<=max; i++){
-    //console.log(i)
     at_index = (1/(stdev*Math.sqrt(2 * Math.PI)))*Math.pow(Math.E, -(1/2)*Math.pow((i-mean)/stdev,2))
-    //console.log(at_index)
     dist.push((at_index/sum)*100);
   }
   return biased_random(...dist);
 }
-/*
-function test(){
-  var reps = 100000;
-  var max = 5;
-  var min = 1;
-  var std = 2;
-  var mean = 1;
-  var dict = {"0":0};
-  var cur = 0;
-  for(var i = 0; i<reps; i++){
-    cur = gaussianRandom_ans(min, max, mean, std);
-
-    keys = Object.keys(dict);
-
-    if (!keys.includes(`${cur}`)){
-      dict[`${cur}`] = 1;
-
-    } else {
-      dict[`${cur}`] += 1;
-    }
-
-  }
-  console.log(dict)
-  for (i in dict){
-    console.log(`${i}: ${dict[i]/reps * 100}%`)
-  }
-
-}
-*/
 
 function compareNumbers(a, b) {
   return b - a;
@@ -96,11 +73,9 @@ function findOcc(list, sus) {
 
 function biased_random(...args) {
   const args_sorted = [...args].slice().sort(compareNumbers);
-  //console.log(args_sorted);
   let array_sum = 0;
   const fate = Math.random()*100;
   let the_one = null;
-  //console.log(fate);
   for (i in args_sorted) {
     const arg = args_sorted[i];
     array_sum += arg;
@@ -110,7 +85,6 @@ function biased_random(...args) {
     }
   }
   const Occs = findOcc(args, the_one);
-  //console.log("test: "+Occs[getRandomInt(0, Occs.length - 1)]);
   return Occs[getRandomInt(0, Occs.length - 1)];
 }
 
@@ -122,7 +96,6 @@ function multiple_biased(...args){
       picks.push(i);
     }
   }
-  //console.log(picks);
   return picks
 }
 
@@ -158,7 +131,6 @@ function CheckNegs(list, step){
 
 function IntCheck(n, n_name, step){
   if(!Number.isInteger(n)){
-    //console.log('Nymber '+n)
     throw `TypeError at ${step+1}: ${n_name} has to be an Integer. "${n}" is not an integer`
   }
 }
@@ -247,13 +219,101 @@ function reverse_str(s){
   return s.split('').reverse().join('');
 }
 
+async function get_xpath(element){
+  let xpath = await driver.executeScript(`
+    function getElementXPath(el) {
+      if (el && el.id) {
+        return 'id("' + el.id + '")';
+      }
+      const parts = [];
+      while (el && el.nodeType === Node.ELEMENT_NODE) {
+        let index = 1;
+        let sibling = el.previousSibling;
+        while (sibling) {
+          if (sibling.nodeType === Node.ELEMENT_NODE && sibling.nodeName === el.nodeName) {
+            index++;
+          }
+          sibling = sibling.previousSibling;
+        }
+        const tagName = el.nodeName.toLowerCase();
+        const part = (index > 1 ? tagName + '[' + index + ']' : tagName);
+        parts.unshift(part);
+        el = el.parentNode;
+      }
+      return '/' + parts.join('/');
+    }
+    return getElementXPath(arguments[0]);
+  `, element);
+  return xpath;
+}
+
+async function send_prope(URL){
+      let data = [];
+
+      await driver.get(URL);
+
+      while (true){
+        await driver.wait(async () => {
+          const readyState = await driver.executeScript("return document.readyState");
+          return readyState === "complete";
+        }, 10000);
+        
+        let questionHolder = await driver.findElement(By.xpath(questionHolder_xpath));
+        let q_elements = await get_children(questionHolder);  
+
+        let page_data = [];
+        let page_answers = [];
+
+        let skip_counter = 0;
+        for (i in q_elements){
+          let current = q_elements[i];
+          let current_data = await get_data(current, i);
+          if (current_data === null) {
+            skip_counter += 1;
+            continue;
+          }
+          page_data.push(current_data);
+          page_answers.push({type: "random", params: [1, current_data.length]});
+          await answer_question(page_answers[i-skip_counter], page_data[i-skip_counter], i-skip_counter);
+        }
+      
+        let submitButton_xpath;
+        if(data.length === 0){
+          submitButton_xpath = '/html/body/div[1]/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/div/span/span';
+        } else {
+          submitButton_xpath = '/html/body/div/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/div[2]/span/span';
+        }
+
+        page_data[page_data.length-1].continue_xpath = submitButton_xpath;
+        data.push(...page_data);
+
+
+        let submitButton = await driver.findElement(By.xpath(submitButton_xpath)); 
+        submit_text = await submitButton.getAttribute("innerHTML");
+        
+        if(submit_text == "Submit"){
+          console.log("Prope done");
+          return data;
+        }
+        await submitButton.click();
+    }
+} 
+
 async function get_data(element, step){
-  let raw_data = await element[0].getAttribute("data-params")
+  let data_stack = await get_children(element);
+  let raw_data = await data_stack[0].getAttribute("data-params");
+  let identifier;
+
+  if([null, undefined].includes(raw_data)){
+    return null;
+  }
+
   raw_data = raw_data.slice(4);
   raw_data = JSON.parse(reverse_str(reverse_str(raw_data).slice(reverse_str(raw_data).indexOf("]", 1))));
-  let identifier = raw_data[3];
+  identifier = raw_data[3];
+
   let data = {};
-  //console.log(raw_data);
+
   if (Object.values(identifiers).includes(identifier)){
     data.type = Object.keys(identifiers)[Object.values(identifiers).indexOf(identifier)];
   } else {
@@ -266,13 +326,123 @@ async function get_data(element, step){
     data.length = null;
   }
 
-  //console.log(data)
+  data.element_xpath = await get_xpath(element);
   return data
 }
 
-async function submitFakeResponse(answersheet, URL, pup){
-  var driver;
-  var ans = answersheet;
+async function answer_question(ans, data, step){
+  let element = await driver.findElement(By.xpath(data.element_xpath));
+
+  if(ans.type==="none"){
+    return;
+  };
+
+  await driver.executeScript(
+    "arguments[0].scrollIntoView({block: 'center'});", 
+    element
+  );
+  //await driver.executeScript("arguments[0].focus();", q_elements[step]);
+
+  switch(data.type){
+    case "checkbox": 
+      var CheckChoice = await getResponseIndex(ans);
+      ErrorCheck(data.type, ans, step, data.length);
+      let checkParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]'))
+      let Checkbox_options = await get_children(checkParent);
+
+      if(Array.isArray(CheckChoice)){
+        for(i in Checkbox_options){
+          if(CheckChoice.includes(parseInt(i))){
+            let _box = await Checkbox_options[i];
+            await _box.click();
+          }
+        }
+      } else {
+        let _box = await Checkbox_options[CheckChoice]; //answer_options[i];
+        await _box.click();
+      }
+      break;
+
+    case "scale":
+      var scaleChoice = getResponseIndex(ans);
+      ErrorCheck(data.type, ans, step, data.length);
+      let scaleParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+      let scale_options = await get_children(scaleParent);
+      scale_options = scale_options.slice(1,-1);
+      let _scale = await scale_options[scaleChoice];
+      await _scale.click();
+      break;
+
+    case "multipleChoice":
+      var multiChoice = getResponseIndex(ans);
+      ErrorCheck(data.type, ans, step, data.length);
+
+      let multiParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
+      let multi_options = await get_children(multiParent);
+      let _multi = await multi_options[multiChoice];
+
+      await _multi.click();
+      break;
+
+    case "rating":
+      var ratingChoice = getResponseIndex(ans);
+      ErrorCheck(data.type, ans, step, data.length);
+
+      let ratingParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+      let rating_options = await get_children(ratingParent);
+      rating_options = await rating_options.slice(1,-1);
+
+      let _rating = await rating_options[ratingChoice];
+      await _rating.click();
+      break;
+    case "shortText":
+      let shortPragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'))
+      await driver.actions()
+      .sendKeys(shortPragraph, ' ')
+      .perform()
+      break;
+
+    case "longText":
+      let longPragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'))
+      await driver.actions()
+      .sendKeys(longPragraph, ' ')
+      .perform()
+      break;
+    default:
+      throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
+  }
+};
+
+async function submitFakeResponse(answersheet, data){
+  try {
+    for (step in data){
+      await answer_question(answersheet[step], data[step], step);
+      if(data[step].continue_xpath !== undefined){
+        let continue_button = await driver.findElement(By.xpath(data[step].continue_xpath));
+        await continue_button.click();
+        await driver.wait(async () => {
+          const readyState = await driver.executeScript("return document.readyState");
+          return readyState === "complete";
+        }, 10000);
+      }
+    }
+//end
+    var return_xpath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a'
+
+    await driver.wait(
+      until.elementLocated(By.xpath(return_xpath)),
+      10000
+    );
+  
+    return;
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+async function submitWave(applicants, _URL, answers){
+  var URL = _URL.slice().concat("?hl=en");
+  var ans = answers;
 
   var config_paths = await JSON.parse(fs.readFileSync('config_paths.json', 'utf8'));
 
@@ -281,7 +451,7 @@ async function submitFakeResponse(answersheet, URL, pup){
     const service = new firefox.ServiceBuilder(config_paths.geckodriver_path); // path to geckodriver
     const options = new firefox.Options()
 
-    .addArguments('--headless')
+    //.addArguments('--headless')
     .addArguments('--no-sandbox')
     .setBinary(config_paths.firefox_path)
     
@@ -295,141 +465,35 @@ async function submitFakeResponse(answersheet, URL, pup){
     .setPreference('startup.homepage_welcome_url.additional', 'about:blank')
     .setPreference('datareporting.policy.dataSubmissionEnabled', false)
     .setPreference('gfx.downloadable_fonts.enabled', false); 
+
     driver = await new Builder()
     .forBrowser(Browser.FIREFOX)
     .setFirefoxService(service)
     .setFirefoxOptions(options)
     .build();
 
+    let prope_data = await send_prope(URL);
 
-    await driver.get(URL);
-
-    await driver.wait(async () => {
-      const readyState = await driver.executeScript('return document.readyState');
-      return readyState === 'complete';
-    }, 10000);
-
-    for (var its = 0; its<pup; its++){
-      console.log(its+1);
-      let questionHolder_xpath = '//*[@id="mG61Hd"]/div[2]/div/div[2]';
+    for(let i = 0; i<applicants; i++){
+      console.log(i+1)
+      await driver.get(URL);
+      await driver.wait(async () => {
+        const readyState = await driver.executeScript('return document.readyState');
+        return readyState === 'complete';
+      }, 10000);
 
       await driver.wait(
         until.elementLocated(By.xpath(questionHolder_xpath)),
         10000
       );
-  
-      let questionHolder = await driver.findElement(By.xpath('//*[@id="mG61Hd"]/div[2]/div/div[2]'));
-      let q_elements= await get_children(questionHolder);  
-
-      let q_data = [];
-      for (i in q_elements){
-        let current = await get_children(q_elements[i]);
-        q_data.push(await get_data(current, i));
-      }
-      //console.log(q_data);
-    
-
   // handel
-      if (ans.length>q_data.length){
-        throw new Error(`ContainmentError: More Answers(${ans.length}) than Questions(${q_data.length})`)
-      } else if (ans.length<q_data.length){
-        throw `ContainmentError: Fewer Answers(${ans.length}) than Questions(${q_data.length})`
+      if (ans.length>prope_data.length){
+        throw new Error(`ContainmentError: More Answers(${ans.length}) than Questions(${prope_data.length})`)
+      } else if (ans.length<prope_data.length){
+        throw `ContainmentError: Fewer Answers(${ans.length}) than Questions(${prope_data.length})`
       }
 
-
-      for (step in q_data){
-        if(ans[step].type==="none"){
-          continue;
-        };
-  //*[@id="mG61Hd"]/div[2]/div/div[2]/div[n]
-
-        switch(q_data[step].type){
-          case "checkbox": 
-            var CheckChoice = await getResponseIndex(ans[step]);
-            ErrorCheck(q_data[step].type, ans[step], step, q_data[step].length);
-            let checkParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]'))
-            let Checkbox_options = await get_children(checkParent);
-
-            if (Array.isArray(CheckChoice)){
-              for(i in Checkbox_options){
-                if(CheckChoice.includes(parseInt(i))){
-                  //console.log(CheckChoice);
-                  let _box = await Checkbox_options[i];
-                  await _box.click();
-                }
-              }
-            } else {
-              let _box = await Checkbox_options[CheckChoice]; //answer_options[i];
-              await _box.click();
-            }
-            break;
-
-          case "scale":
-            var scaleChoice = getResponseIndex(ans[step]);
-            ErrorCheck(q_data[step].type, ans[step], step, q_data[step].length);
-            let scaleParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
-            let scale_options = await get_children(scaleParent);
-            scale_options = scale_options.slice(1,-1);
-            let _scale = await scale_options[scaleChoice];
-            await _scale.click();
-            break;
-
-          case "multipleChoice":
-            var multiChoice = getResponseIndex(ans[step]);
-            ErrorCheck(q_data[step].type, ans[step], step, q_data[step].length);
-
-            let multiParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
-            let multi_options = await get_children(multiParent);
-            let _multi = await multi_options[multiChoice];
-            //console.log(_multi);
-
-            await _multi.click();
-            
-            //let _ = await driver.findElement(By.xpath('//*[@id="mG61Hd"]/div[2]/div/div[2]/div[6]/div/div/div[2]/div[1]/div/span/div/div[2]'))
-            //await _.click()
-            break;
-
-          case "rating":
-            var ratingChoice = getResponseIndex(ans[step]);
-            ErrorCheck(q_data[step].type, ans[step], step, q_data[step].length);
-
-            let ratingParent = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
-            let rating_options = await get_children(ratingParent);
-            rating_options = await rating_options.slice(1,-1);
-
-            let _rating = await rating_options[ratingChoice];
-            await _rating.click();
-            break;
-          case "shortText":
-            let shortPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'))
-            await driver.actions()
-            .sendKeys(shortPragraph, 'Fake short response n')
-            .perform()
-            break;
-
-          case "longText":
-            let longPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'))
-            await driver.actions()
-            .sendKeys(longPragraph, 'Fake long response n')
-            .perform()
-            break;
-          default:
-            throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
-        }
-      }
-
-  //end
-      let submitButton = await driver.findElement(By.xpath('//*[@id="mG61Hd"]/div[2]/div/div[3]/div/div[1]/div/span'));
-      await submitButton.click();
-
-      var return_xpath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a'
-
-      await driver.wait(
-        until.elementLocated(By.xpath(return_xpath)),
-        10000
-      );
-
-      await driver.get(URL);
+      await submitFakeResponse(answers, prope_data);
   }
 
   } catch (e) {
@@ -440,5 +504,4 @@ async function submitFakeResponse(answersheet, URL, pup){
 }
 
 
-//submitWave(applicants, URL, answers);
-submitFakeResponse(answers, URL, applicants)
+submitWave(applicants, URL, answers);
