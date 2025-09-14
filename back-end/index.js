@@ -15,7 +15,7 @@ const answers = [
   {type: "biased", params: [100,0]},
   {type: "biased", params: [0,100]},
   {type: "biased", params: [100,0,0,0]},
-  {type: "random", params: [1,2]},
+  {type: "none"},
   {type: "biased", params: [100,0,0]},
   {type: "biased", params: [100,0,0,0,0,0]},
   {type: "biased", params: [100,0,0,0,0]},
@@ -402,27 +402,27 @@ async function answer_question(ans, data, step){
       await _rating.click();
       break;
     case "shortText":
-      let shortPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
+      let shortPragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
       await driver.executeScript("arguments[0].scrollIntoView(true);", shortPragraph);
-      await shortPragraph.sendKeys(getResponseIndex(ans[step]));
+      await shortPragraph.sendKeys(getResponseIndex(ans));
       break;
     case "longText":
-      let longParagraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
+      let longParagraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
       await driver.executeScript("arguments[0].scrollIntoView(true);", longParagraph);
-      await longParagraph.sendKeys(getResponseIndex(ans[step]));
+      await longParagraph.sendKeys(getResponseIndex(ans));
       break;
     case "dropdown":
-      let dropdownChoice = getResponseIndex(ans[step]);
-      let dropDown = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div'));
+      let dropdownChoice = getResponseIndex(ans);
+      let dropDown = await element.findElement(By.xpath('./div/div/div[2]/div'));
       await dropDown.click();
       await driver.wait(
         until.elementLocated(By.xpath(`html/body/div[1]/div[2]/form/div[2]/div/div[2]/div[${Number(step)+1}]/div/div/div[2]/div/div[2]/div[3]`)),
         5000
       );
-      let choices = await get_children(await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[2]')));
+      let choices = await get_children(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]')));
       await choices[dropdownChoice+2].click();
       await driver.wait(
-        until.stalenessOf(await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
+        until.stalenessOf(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
         500
       );
       break;
