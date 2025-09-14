@@ -3,6 +3,7 @@ const assert = require("assert");
 const firefox = require('selenium-webdriver/firefox');
 const questionHolder_xpath = '//*[@id="mG61Hd"]/div[2]/div/div[2]';
 var driver;
+const os = require("os");
 
 var fs = require('fs');
 //const { generateKey } = require('crypto');
@@ -461,17 +462,18 @@ async function submitFakeResponse(answersheet, data){
 async function submitWave(applicants, _URL, answers){
   var URL = _URL.slice().concat("?hl=en");
   var ans = answers;
-
+  
   var config_paths = await JSON.parse(fs.readFileSync('config_paths.json', 'utf8'));
+  let platform = config_paths[os.platform()];
 
   try {
 // load
-    const service = new firefox.ServiceBuilder(config_paths.geckodriver_path); // path to geckodriver
+    const service = new firefox.ServiceBuilder(platform.geckodriver_path); // path to geckodriver
     const options = new firefox.Options()
 
     //.addArguments('--headless')
     .addArguments('--no-sandbox')
-    .setBinary(config_paths.firefox_path)
+    .setBinary(platform.firefox_path)
     
     .setPreference('permissions.default.image', 2) 
     .setPreference('dom.ipc.plugins.enabled.libflashplayer.so', false) 
