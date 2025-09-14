@@ -1,4 +1,5 @@
 {
-    "firefox_path": "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
-    "geckodriver_path": "C:\\WebDrivers\\geckodriver.exe"
+    "firefox_path": "/snap/firefox/current/firefox.launcher",
+    "geckodriver_path": "/snap/bin/geckodriver"
+
 }
