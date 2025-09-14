@@ -26,6 +26,7 @@ const answers = [
 
 const applicants = 5;
 const URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfVSy4q6FU12oN6aqqTlwNhkzqwAUkUTEVpbXBg3ooUUM57Tg/viewform'
+
 ///////////////////////////////////////////////
 
 const identifiers ={
@@ -35,6 +36,7 @@ const identifiers ={
   "rating":18,
   "shortText":0,
   "longText":1,
+  "dropdown":3,
   "trickster":-1
 };
 
@@ -204,6 +206,10 @@ function getResponseIndex(ansConfig) {
   }else if(type === "random"){
     const [min, max] = params;
     return getRandomInt(min-1, max-1)
+  } else if (type === "dropdown") {
+    return biased_random(...params);
+  } else if (type === "shortText" || type === "longText") {
+    return params[0];
   } else if(type === "none"){
     return null;
   } else {
@@ -396,17 +402,29 @@ async function answer_question(ans, data, step){
       await _rating.click();
       break;
     case "shortText":
-      let shortPragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'))
-      await driver.actions()
-      .sendKeys(shortPragraph, ' ')
-      .perform()
+      let shortPragraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
+      await driver.executeScript("arguments[0].scrollIntoView(true);", shortPragraph);
+      await shortPragraph.sendKeys(getResponseIndex(ans[step]));
       break;
-
     case "longText":
-      let longPragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'))
-      await driver.actions()
-      .sendKeys(longPragraph, ' ')
-      .perform()
+      let longParagraph = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
+      await driver.executeScript("arguments[0].scrollIntoView(true);", longParagraph);
+      await longParagraph.sendKeys(getResponseIndex(ans[step]));
+      break;
+    case "dropdown":
+      let dropdownChoice = getResponseIndex(ans[step]);
+      let dropDown = await q_elements[step].findElement(By.xpath('./div/div/div[2]/div'));
+      await dropDown.click();
+      await driver.wait(
+        until.elementLocated(By.xpath(`html/body/div[1]/div[2]/form/div[2]/div/div[2]/div[${Number(step)+1}]/div/div/div[2]/div/div[2]/div[3]`)),
+        5000
+      );
+      let choices = await get_children(await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[2]')));
+      await choices[dropdownChoice+2].click();
+      await driver.wait(
+        until.stalenessOf(await q_elements[step].findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
+        500
+      );
       break;
     default:
       throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
@@ -486,7 +504,6 @@ async function submitWave(applicants, _URL, answers){
         until.elementLocated(By.xpath(questionHolder_xpath)),
         10000
       );
-  // handel
       if (ans.length>prope_data.length){
         throw new Error(`ContainmentError: More Answers(${ans.length}) than Questions(${prope_data.length})`)
       } else if (ans.length<prope_data.length){
@@ -497,7 +514,7 @@ async function submitWave(applicants, _URL, answers){
   }
 
   } catch (e) {
-    console.log(e)
+    console.log(e);
   } finally {
     driver.close();
   }
