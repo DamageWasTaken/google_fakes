@@ -11,22 +11,16 @@ var fs = require('fs');
 
 ////////////////////////////////////////////////
 const answers = [
-  {type: "biased", params: [100,0,0,0,0]},
-  {type: "biased", params: [0,0,95,5]},
-  {type: "biased", params: [100,0]},
-  {type: "biased", params: [0,100]},
-  {type: "biased", params: [100,0,0,0]},
-  {type: "none"},
-  {type: "biased", params: [100,0,0]},
-  {type: "biased", params: [100,0,0,0,0,0]},
-  {type: "biased", params: [100,0,0,0,0]},
-  {type: "biased", params: [0,0,0,0,100]},
-  {type: "biased", params: [100,0,0,0,0]},
-  {type: "random", params: [1,2]}
+  {type: "biased_text", params: [{ans: "50%", prop: 50}, {ans: "25%", prop: 25}, {ans: "10", prop: 10}, {ans: "15", prop: 15}]},
+  {type: "biased_text", params: [{ans: "50%", prop: 50}, {ans: "25%", prop: 25}, {ans: "10", prop: 10}, {ans: "15", prop: 15}]},
+  {type: "biased", params: [50, 20, 10, 17.5, 2.5]},
+  {type: "biased", params: [50, 25, 15, 10]},
+  {type: "multi_biased", params: {min: 0, max: 0, props: [50, 25, 10, 17.5]}},
+  {type: "biased", params: [50, 25, 10, 12.5, 2.5]},
 ];
 
 const applicants = 5;
-const URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfVSy4q6FU12oN6aqqTlwNhkzqwAUkUTEVpbXBg3ooUUM57Tg/viewform'
+const original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSd86dBJ7EDRN0-HKUNw2dzTjPP9Lj3hIvbQuy7bhIvyxJdZmg/viewform?usp=dialog'
 
 ///////////////////////////////////////////////
 
@@ -41,7 +35,7 @@ const identifiers ={
   "trickster":-1
 };
 
-function getRandomInt(min, max) {
+function get_random_int(min, max) {
   min = Math.round(min);
   max = Math.round(max);
   return Math.floor(Math.random() * (max - min+1)) + min;
@@ -60,11 +54,11 @@ function gaussianRandom_ans(min, max, mean, stdev) {
   return biased_random(...dist);
 }
 
-function compareNumbers(a, b) {
+function compare_numbers(a, b) {
   return b - a;
 }
 
-function findOcc(list, sus) {
+function find_occ(list, sus) {
   const Occs = [];
   for (let i = 0; i < list.length; i++) {
     if (list[i] === sus) {
@@ -75,7 +69,7 @@ function findOcc(list, sus) {
 }
 
 function biased_random(...args) {
-  const args_sorted = [...args].slice().sort(compareNumbers);
+  const args_sorted = [...args].slice().sort(compare_numbers);
   let array_sum = 0;
   const fate = Math.random()*100;
   let the_one = null;
@@ -87,19 +81,30 @@ function biased_random(...args) {
       break;
     }
   }
-  const Occs = findOcc(args, the_one);
-  return Occs[getRandomInt(0, Occs.length - 1)];
+  const Occs = find_occ(args, the_one);
+  return Occs[get_random_int(0, Occs.length - 1)];
 }
 
-function multiple_biased(...args){
+function multiple_biased(args){
   let picks = [];
-  for(var i = 0; i<args.length; i++){
+  let picks_amount = Math.floor(Math.random()*((args.max+1)-args.min))+min;
+  let amount = 0;
+  while(picks_amount === amount){
     const fate = Math.random()*100;
-    if(fate < args[i]){
+    const subject = Math.floor(Math.random()*args.props.lenght);
+    if(fate < args.props[subject]){
       picks.push(i);
     }
   }
-  return picks
+  return picks;
+}
+
+function biased_text(args){
+  let props = [];
+  for(let i = 0; i<args.length; i++){
+    props.push(args[i].prop);
+  }
+  return args[biased_random(...props)].ans;
 }
 
 function multiple_random(min, max, amount){
@@ -107,15 +112,15 @@ function multiple_random(min, max, amount){
   var prop = 0
   for(var i = 0; i<amount; i++){
     const fate = Math.random();
-    const random = getRandomInt(min, max);
-    if(fate < Math.random()){
-      picks.push(getRandomInt);
+    const random = get_random_int(min, max);
+    if(fate < random){
+      picks.push(get_random_int);
     }
   }
   return picks
 }
 
-function List_sum(list){
+function list_sum(list){
   var sum = 0
   for (i in list){
     sum += list[i]
@@ -123,7 +128,7 @@ function List_sum(list){
   return sum
 }
 
-function CheckNegs(list, step){
+function check_negs(list, step){
   for (i in list){
     if(list[i]<0){
       throw `LimitsError at ${step+1}: No negative numbers allowed. The ${Number(i+1)}'st input is negative (${list[i]})`
@@ -132,13 +137,13 @@ function CheckNegs(list, step){
   return false
 }
 
-function IntCheck(n, n_name, step){
+function int_check(n, n_name, step){
   if(!Number.isInteger(n)){
     throw `TypeError at ${step+1}: ${n_name} has to be an Integer. "${n}" is not an integer`
   }
 }
 
-function BounderiesCheck(min, max, lower, upper, step){
+function bounderies_check(min, max, lower, upper, step){
     if(min<lower){
       throw `LimitsError at ${step+1}: Lowerbound (min?: ${min}) can't be less than 1`
     }
@@ -150,67 +155,98 @@ function BounderiesCheck(min, max, lower, upper, step){
     }
 }
 
-function ErrorCheck(Qtype, ans, step, Qlen){
+function multi_biased_error_check(ans, data, step){
+  if(ans.params.max > ans.params.props.length){
+    throw `Multi-LimitsError at ${step+1}: The Max amount of questions to answer (${ans.params.max}) can't be higher than the number of question properbilleties(${ans.params.props.length})`
+  } else if(ans.params.max > data.lenght){
+    throw `Multi-LimitsError at ${step+1}: The question has only (${ans.params.length} possible answers. Not ${ans.params.props.length}`
+  }
+  bounderies_check(ans.params.min, ans.params.max, 0, data.length, step);
+};
+
+function text_error_check(){ // TODO
+  return;
+};
+
+function error_check(question_data, ans, step){
+  console.log(ans)
+  var Q_len = question_data.length;
+  var Q_type = question_data.type;
+
+  if("biased_text" === ans.type){
+    text_error_check(Q_len, ans, step, Q_len);
+    return;
+  }
 
   step = parseInt(step);
-  var Atype = ans.type;
-  var Alen = ans.params.length
-  var params = ans.params
-  var min = 0
-  var max = 0
+  var A_type = ans.type;
+  var A_len;
+  if(A_type === "multi_biased"){
+    A_len = ans.params.props.length;
+  } else {
+    A_len = params.length;
+  }
+  var params = ans.params;
+  var min = 0;
+  var max = 0;
 
-  CheckNegs(params, step)
+  check_negs(params, step)
   
-  if (["multi_biased", "biased"].includes(ans.type)){
-      min = 1
-      max = Alen
-    } else {
-      min = params[0]
-      max = params[1]
+  if (A_type === "biased" || A_type === "multi_biased"){
+    min = 1;
+    max = A_len;
+    if(A_type === "multi_biased"){
+      if(data.must_answer && params.min === 0){
+        throw `Multi-LimitsError at ${step+1}: Question ${step+1} is a 'must-answer' question. Therefor Min can't be 0`
+      }
+      multi_biased_error_check(ans, data, step);
     }
+  } else {
+    min = params[0];
+    max = params[1];
+  }
 
   if (ans.type === "multi_random"){
-    amount = params[2]
-    IntCheck(amount, "Amount", step)
+    amount = params[2];
+    int_check(amount, "Amount", step);
   }
 
-  IntCheck(min, "Min", step);
-  IntCheck(max, "Max", step);
+  int_check(min, "Min", step);
+  int_check(max, "Max", step);
 
+  bounderies_check(min, max, 1, Q_len, step)
 
-  BounderiesCheck(min, max, 1, Qlen, step)
-
-  if (Qtype !== "checkbox"){
-    if(["multi_biased", "multi_random"].includes(Atype)){
-      throw `CompatibilityError at ${step+1}: Answer type ${Atype} not fit for ${Qtype}`
+  if (Q_type !== "checkbox"){
+    if(["multi_biased", "multi_random"].includes(A_type)){
+      throw `CompatibilityError at ${step+1}: Answer type ${A_type} not fit for ${Q_type}`
       }
-    else if(Atype === "biased"){
-      if (List_sum(params)!==100){
-        throw `LimitsError at ${step+1}: All percentages must add to 100% not ${List_sum(params)}%`
+    else if(A_type === "biased"){
+      if (list_sum(params)!==100 && data.must_answer){
+        throw `LimitsError at ${step+1}: All percentages must add to 100% not ${list_sum(params)}%. The question is of type 'must-answer'`
+      } else if(list_sum(params)>100){  
+        throw `LimitsError at ${step+1}: All percentages must add to 100% or less not ${list_sum(params)}%`
+      }
     }
   }
 }
-}
 
-function getResponseIndex(ansConfig) {
-  const { type, params } = ansConfig;
+function getResponseIndex(ans_config) {
+  const { type, params } = ans_config;
   if (type === "gaussian") {
     const [min, max, mean, stdev] = params;
     return gaussianRandom_ans(min-1, max-1, mean-1, stdev);
   } else if (type === "biased") {
     return biased_random(...params);
   } else if(type === "multi_biased"){
-    return multiple_biased(...params)
+    return multiple_biased(params);
   }else if(type === "multi_random"){
     const [min, max, amount] = params;
     return multiple_random(min-1, max-1, amount);
   }else if(type === "random"){
     const [min, max] = params;
-    return getRandomInt(min-1, max-1)
-  } else if (type === "dropdown") {
-    return biased_random(...params);
-  } else if (type === "shortText" || type === "longText") {
-    return params[0];
+    return get_random_int(min-1, max-1)
+  } else if (type === "biased_text") {
+    return biased_text(params);
   } else if(type === "none"){
     return null;
   } else {
@@ -280,29 +316,38 @@ async function send_prope(URL){
             continue;
           }
           page_data.push(current_data);
-          page_answers.push({type: "random", params: [1, current_data.length]});
+          if(!["longText", "shortText"].includes(current_data.type)){
+            page_answers.push({type: "random", params: [1, current_data.length]});
+          } else {
+            page_answers.push({type: "biased_text", params: [{ans: " ", prop: 100}]});
+          }
           await answer_question(page_answers[i-skip_counter], page_data[i-skip_counter], i-skip_counter);
         }
       
-        let submitButton_xpath;
+        let submit_button_xpath;
         if(data.length === 0){
-          submitButton_xpath = '/html/body/div[1]/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/div/span/span';
+          submit_button_xpath = '/html/body/div[1]/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/div/span/span';
         } else {
-          submitButton_xpath = '/html/body/div/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/div[2]/span/span';
+          submit_button_xpath = '/html/body/div/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/div[2]/span/span';
         }
 
-        page_data[page_data.length-1].continue_xpath = submitButton_xpath;
+        if (page_data.length > 0){
+          page_data[page_data.length-1].continue_xpath = [submit_button_xpath];
+        } else {
+          let last_question = data[data.length-1];
+          last_question.continue_xpath.push(submit_button_xpath);
+        };
+        
         data.push(...page_data);
 
-
-        let submitButton = await driver.findElement(By.xpath(submitButton_xpath)); 
-        submit_text = await submitButton.getAttribute("innerHTML");
+        let submit_button = await driver.findElement(By.xpath(submit_button_xpath)); 
+        submit_text = await submit_button.getAttribute("innerHTML");
         
         if(submit_text == "Submit"){
           console.log("Prope done");
           return data;
         }
-        await submitButton.click();
+        await submit_button.click();
     }
 } 
 
@@ -311,15 +356,21 @@ async function get_data(element, step){
   let raw_data = await data_stack[0].getAttribute("data-params");
   let identifier;
 
+  let data = {};
+
   if([null, undefined].includes(raw_data)){
     return null;
   }
 
+  let must_answer_parent = await element.findElement(By.xpath("./div/div/div[1]/div"));
+  let must_answer_star = await get_children(must_answer_parent);
+  let must_answer_parameter = await must_answer_star[0].getAttribute("aria-describedby");
+
+  data.must_answer = ([null, undefined].includes(must_answer_parameter));
+
   raw_data = raw_data.slice(4);
   raw_data = JSON.parse(reverse_str(reverse_str(raw_data).slice(reverse_str(raw_data).indexOf("]", 1))));
   identifier = raw_data[3];
-
-  let data = {};
 
   if (Object.values(identifiers).includes(identifier)){
     data.type = Object.keys(identifiers)[Object.values(identifiers).indexOf(identifier)];
@@ -339,6 +390,9 @@ async function get_data(element, step){
 
 async function answer_question(ans, data, step){
   let element = await driver.findElement(By.xpath(data.element_xpath));
+  //console.log(data.must_answer);
+
+  error_check(data, ans, step);
 
   if(ans.type==="none"){
     return;
@@ -348,119 +402,117 @@ async function answer_question(ans, data, step){
     "arguments[0].scrollIntoView({block: 'center'});", 
     element
   );
-  //await driver.executeScript("arguments[0].focus();", q_elements[step]);
-
+  
   switch(data.type){
     case "checkbox": 
-      var CheckChoice = await getResponseIndex(ans);
-      ErrorCheck(data.type, ans, step, data.length);
-      let checkParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]'))
-      let Checkbox_options = await get_children(checkParent);
+      var check_choice = await getResponseIndex(ans);
+      let check_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]'))
+      let checkbox_options = await get_children(check_parent);
 
-      if(Array.isArray(CheckChoice)){
-        for(i in Checkbox_options){
-          if(CheckChoice.includes(parseInt(i))){
-            let _box = await Checkbox_options[i];
+      if(Array.isArray(check_choice)){
+        for(i in checkbox_options){
+          if(check_choice.includes(parseInt(i))){
+            let _box = await checkbox_options[i];
             await _box.click();
           }
         }
       } else {
-        let _box = await Checkbox_options[CheckChoice]; //answer_options[i];
+        let _box = await checkbox_options[check_choice];
         await _box.click();
       }
       break;
 
     case "scale":
-      var scaleChoice = getResponseIndex(ans);
-      ErrorCheck(data.type, ans, step, data.length);
-      let scaleParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
-      let scale_options = await get_children(scaleParent);
+      var scale_choice = getResponseIndex(ans);
+      let scale_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+      let scale_options = await get_children(scale_parent);
       scale_options = scale_options.slice(1,-1);
-      let _scale = await scale_options[scaleChoice];
+      let _scale = await scale_options[scale_choice];
       await _scale.click();
       break;
 
     case "multipleChoice":
-      var multiChoice = getResponseIndex(ans);
-      ErrorCheck(data.type, ans, step, data.length);
-
-      let multiParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
-      let multi_options = await get_children(multiParent);
-      let _multi = await multi_options[multiChoice];
+      var multi_choice = getResponseIndex(ans);
+      let multi_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
+      let multi_options = await get_children(multi_parent);
+      let _multi = await multi_options[multi_choice];
 
       await _multi.click();
       break;
 
     case "rating":
-      var ratingChoice = getResponseIndex(ans);
-      ErrorCheck(data.type, ans, step, data.length);
-
-      let ratingParent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
-      let rating_options = await get_children(ratingParent);
+      var rating_choice = getResponseIndex(ans);
+      let rating_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+      let rating_options = await get_children(rating_parent);
       rating_options = await rating_options.slice(1,-1);
 
-      let _rating = await rating_options[ratingChoice];
+      let _rating = await rating_options[rating_choice];
       await _rating.click();
       break;
     case "shortText":
-      let shortPragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
-      await driver.executeScript("arguments[0].scrollIntoView(true);", shortPragraph);
-      await shortPragraph.sendKeys(getResponseIndex(ans));
+      let short_paragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
+      await driver.executeScript("arguments[0].scrollIntoView(true);", short_paragraph);
+      await short_paragraph.sendKeys(getResponseIndex(ans));
       break;
+
     case "longText":
-      let longParagraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
-      await driver.executeScript("arguments[0].scrollIntoView(true);", longParagraph);
-      await longParagraph.sendKeys(getResponseIndex(ans));
+      let long_paragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
+      await driver.executeScript("arguments[0].scrollIntoView(true);", long_paragraph);
+      await long_paragraph.sendKeys(getResponseIndex(ans));
       break;
+
     case "dropdown":
-      let dropdownChoice = getResponseIndex(ans);
-      let dropDown = await element.findElement(By.xpath('./div/div/div[2]/div'));
-      await dropDown.click();
+      let dropdown_choice = getResponseIndex(ans);
+      let dropdown = await element.findElement(By.xpath('./div/div/div[2]/div'));
+      let choices = await get_children(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]')));
+      await dropdown.click();
       await driver.wait(
         until.elementLocated(By.xpath(`html/body/div[1]/div[2]/form/div[2]/div/div[2]/div[${Number(step)+1}]/div/div/div[2]/div/div[2]/div[3]`)),
         5000
       );
-      let choices = await get_children(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]')));
-      await choices[dropdownChoice+2].click();
+      await choices[dropdown_choice+2].click();
       await driver.wait(
         until.stalenessOf(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
         500
       );
       break;
+
     default:
       throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
   }
 };
 
 async function submitFakeResponse(answersheet, data){
-  try {
-    for (step in data){
-      await answer_question(answersheet[step], data[step], step);
-      if(data[step].continue_xpath !== undefined){
-        let continue_button = await driver.findElement(By.xpath(data[step].continue_xpath));
+  for (step in data){
+    await answer_question(answersheet[step], data[step], step);
+    if(data[step].continue_xpath !== undefined){
+      for(var i in data[step].continue_xpath){
+        let continue_button = await driver.findElement(By.xpath(data[step].continue_xpath[i]));
         await continue_button.click();
         await driver.wait(async () => {
-          const readyState = await driver.executeScript("return document.readyState");
-          return readyState === "complete";
+          const ready_state = await driver.executeScript("return document.readyState");
+          return ready_state === "complete";
         }, 10000);
       }
     }
-//end
-    var return_xpath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a'
-
-    await driver.wait(
-      until.elementLocated(By.xpath(return_xpath)),
-      10000
-    );
-  
-    return;
-  } catch (e) {
-    console.log(e)
   }
+//end
+  var return_xpath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a'
+
+  await driver.wait(
+    until.elementLocated(By.xpath(return_xpath)),
+    10000
+  );
 }
 
 async function submitWave(applicants, _URL, answers){
-  var URL = _URL.slice().concat("?hl=en");
+  var URL;
+  if(_URL.search("\\?") !== -1){
+    URL = _URL.slice().concat("&hl=en");
+  } else{
+    URL = _URL.slice().concat("?hl=en");
+  }
+  console.log(URL);
   var ans = answers;
   
   var config_paths = await JSON.parse(fs.readFileSync('config_paths.json', 'utf8'));
@@ -523,4 +575,4 @@ async function submitWave(applicants, _URL, answers){
 }
 
 
-submitWave(applicants, URL, answers);
+submitWave(applicants, original_URL, answers);
