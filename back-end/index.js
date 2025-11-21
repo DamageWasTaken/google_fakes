@@ -6,21 +6,28 @@ var driver;
 const os = require("os");
 
 var fs = require('fs');
+const { get } = require('http');
 //const { generateKey } = require('crypto');
 //const { Children } = require('react');
 
 ////////////////////////////////////////////////
 const answers = [
-  {type: "biased_text", params: [{ans: "50%", prop: 50}, {ans: "25%", prop: 25}, {ans: "10", prop: 10}, {ans: "15", prop: 15}]},
-  {type: "biased_text", params: [{ans: "50%", prop: 50}, {ans: "25%", prop: 25}, {ans: "10", prop: 10}, {ans: "15", prop: 15}]},
-  {type: "biased", params: [50, 20, 10, 17.5, 2.5]},
-  {type: "biased", params: [50, 25, 15, 10]},
-  {type: "multi_biased", params: {min: 0, max: 0, props: [50, 25, 10, 17.5]}},
-  {type: "biased", params: [50, 25, 10, 12.5, 2.5]},
+  {type: "gaussian", params: [1,5,1.7,1.3]},
+  {type: "gaussian", params: [1,7,1.9,1.3]},
+  {type: "biased", params: [59,38,3]},
+  {type: "gaussian", params: [1,6,1,1.1]},
+  {type: "biased", params: [52,12,36]},
+  {type: "gaussian", params: [1,5,4,1.7]},
+  {type: "gaussian", params: [1,4,2.7,1.4], logic: {"prev_answer": [4,5]}},
+  {type: "biased", params: [3,11,86]},
+  {type: "multi_biased", params: {min: 1, max: 3, props: [20,10,4,2,7,8,2,1,2]}},
+  {type: "gaussian", params: [2,7,5.4,1.6]},
+  {type: "random", params: [1,7]},
+  {type: "random", params: [1,7]},
 ];
 
-const applicants = 5;
-const original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSd86dBJ7EDRN0-HKUNw2dzTjPP9Lj3hIvbQuy7bhIvyxJdZmg/viewform?usp=dialog'
+const applicants = 1;
+const original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe_Fx31KB48P0Np_yuHRsi-pPeq4O3H8uoZTy1WKhwsAy18ug/viewform'
 
 ///////////////////////////////////////////////
 
@@ -169,7 +176,7 @@ function text_error_check(){ // TODO
 };
 
 function error_check(question_data, ans, step){
-  console.log(ans)
+  //console.log(ans)
   var Q_len = question_data.length;
   var Q_type = question_data.type;
 
@@ -184,7 +191,7 @@ function error_check(question_data, ans, step){
   if(A_type === "multi_biased"){
     A_len = ans.params.props.length;
   } else {
-    A_len = params.length;
+    A_len = ans.params.length;
   }
   var params = ans.params;
   var min = 0;
@@ -299,17 +306,22 @@ async function send_prope(URL){
         await driver.wait(async () => {
           const readyState = await driver.executeScript("return document.readyState");
           return readyState === "complete";
-        }, 10000);
+        }, 10000).then(() => {
+          console.log("Page loaded");
+        });
         
+
         let questionHolder = await driver.findElement(By.xpath(questionHolder_xpath));
         let q_elements = await get_children(questionHolder);  
+        //console.log(q_elements);
 
         let page_data = [];
         let page_answers = [];
 
         let skip_counter = 0;
         for (i in q_elements){
-          let current = q_elements[i];
+          let current = await q_elements[i];
+          console.log(await current.getAttribute("class"));
           let current_data = await get_data(current, i);
           if (current_data === null) {
             skip_counter += 1;
@@ -353,7 +365,14 @@ async function send_prope(URL){
 
 async function get_data(element, step){
   let data_stack = await get_children(element);
+  console.log(await data_stack);
+
+  if (data_stack.length === 0){
+    return null;
+  };
+
   let raw_data = await data_stack[0].getAttribute("data-params");
+
   let identifier;
 
   let data = {};
@@ -388,8 +407,9 @@ async function get_data(element, step){
   return data
 }
 
-async function answer_question(ans, data, step){
+async function answer_question(ans, data, step, prev_answer_index){
   let element = await driver.findElement(By.xpath(data.element_xpath));
+  let answer;
   //console.log(data.must_answer);
 
   error_check(data, ans, step);
@@ -397,6 +417,18 @@ async function answer_question(ans, data, step){
   if(ans.type==="none"){
     return;
   };
+
+  
+  //Checking logic criteria
+  if(ans.logic !== undefined){
+    switch (Object.keys(ans.logic)[0]) {
+      case "prev_answer":
+        if (ans.logic.prev_answer[0] > prev_answer_index || prev_answer_index > ans.logic.prev_answer[1]){
+          return null;
+        }
+        break;
+    }
+  }
 
   await driver.executeScript(
     "arguments[0].scrollIntoView({block: 'center'});", 
@@ -428,15 +460,17 @@ async function answer_question(ans, data, step){
       let scale_options = await get_children(scale_parent);
       scale_options = scale_options.slice(1,-1);
       let _scale = await scale_options[scale_choice];
+      answer = scale_choice;
       await _scale.click();
       break;
 
     case "multipleChoice":
       var multi_choice = getResponseIndex(ans);
       let multi_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
+      //let multi_parent = await element.findElement(By.xpath('./div/div/div[2]/div'));
       let multi_options = await get_children(multi_parent);
       let _multi = await multi_options[multi_choice];
-
+      answer = multi_choice;
       await _multi.click();
       break;
 
@@ -445,8 +479,8 @@ async function answer_question(ans, data, step){
       let rating_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
       let rating_options = await get_children(rating_parent);
       rating_options = await rating_options.slice(1,-1);
-
       let _rating = await rating_options[rating_choice];
+      answer = rating_choice;
       await _rating.click();
       break;
     case "shortText":
@@ -471,6 +505,7 @@ async function answer_question(ans, data, step){
         5000
       );
       await choices[dropdown_choice+2].click();
+      answer = dropdown_choice;
       await driver.wait(
         until.stalenessOf(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
         500
@@ -480,11 +515,13 @@ async function answer_question(ans, data, step){
     default:
       throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
   }
+  return answer;
 };
 
 async function submitFakeResponse(answersheet, data){
+  let prev_answer_index = null;
   for (step in data){
-    await answer_question(answersheet[step], data[step], step);
+    prev_answer_index = await answer_question(answersheet[step], data[step], step, prev_answer_index);
     if(data[step].continue_xpath !== undefined){
       for(var i in data[step].continue_xpath){
         let continue_button = await driver.findElement(By.xpath(data[step].continue_xpath[i]));
