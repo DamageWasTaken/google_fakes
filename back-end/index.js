@@ -20,13 +20,13 @@ const answers = [
   {type: "gaussian", params: [1,5,4,1.7]},
   {type: "gaussian", params: [1,4,2.7,1.4], logic: {"prev_answer": [4,5]}},
   {type: "biased", params: [3,11,86]},
-  {type: "multi_biased", params: {min: 1, max: 3, props: [20,10,4,2,7,8,2,1,2]}},
+  {type: "multi_biased", params: [8,10,4,2,7,8,2,1,2]},
   {type: "gaussian", params: [2,7,5.4,1.6]},
   {type: "random", params: [1,7]},
   {type: "random", params: [1,7]},
 ];
 
-const applicants = 1;
+const applicants = 472;
 const original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe_Fx31KB48P0Np_yuHRsi-pPeq4O3H8uoZTy1WKhwsAy18ug/viewform'
 
 ///////////////////////////////////////////////
@@ -94,15 +94,25 @@ function biased_random(...args) {
 
 function multiple_biased(args){
   let picks = [];
-  let picks_amount = Math.floor(Math.random()*((args.max+1)-args.min))+min;
+  for (let i = 0; i < args.length; i++) {
+    const fate = Math.random()*100;
+    if (fate <= args[i]) {
+      picks.push(i);
+    }
+  }
+  /*
+  Idk what this is...
+
+  let picks = [];
+  let picks_amount = Math.floor(Math.random()*(args.max-args.min+1))+args.min;
   let amount = 0;
-  while(picks_amount === amount){
+  while(picks_amount === amount) {
     const fate = Math.random()*100;
     const subject = Math.floor(Math.random()*args.props.lenght);
     if(fate < args.props[subject]){
       picks.push(i);
     }
-  }
+  }*/
   return picks;
 }
 
@@ -189,8 +199,8 @@ function error_check(question_data, ans, step){
   var A_type = ans.type;
   var A_len;
   if(A_type === "multi_biased"){
-    A_len = ans.params.props.length;
-  } else {
+    A_len = ans.params.length;
+  } else { 
     A_len = ans.params.length;
   }
   var params = ans.params;
@@ -201,17 +211,22 @@ function error_check(question_data, ans, step){
   
   if (A_type === "biased" || A_type === "multi_biased"){
     min = 1;
+  }
+
+  /*
+  if (A_type === "biased" || A_type === "multi_biased"){
+    min = 1;
     max = A_len;
     if(A_type === "multi_biased"){
-      if(data.must_answer && params.min === 0){
-        throw `Multi-LimitsError at ${step+1}: Question ${step+1} is a 'must-answer' question. Therefor Min can't be 0`
+      if(question_data.must_answer && params.min === 0){
+        throw `Multi-LimitsError at ${step+1}: Question ${step+1} is a 'must-answer' question. Therefore Min can't be 0`
       }
-      multi_biased_error_check(ans, data, step);
+      multi_biased_error_check(ans, question_data, step);
     }
   } else {
     min = params[0];
     max = params[1];
-  }
+  }*/
 
   if (ans.type === "multi_random"){
     amount = params[2];
@@ -221,7 +236,7 @@ function error_check(question_data, ans, step){
   int_check(min, "Min", step);
   int_check(max, "Max", step);
 
-  bounderies_check(min, max, 1, Q_len, step)
+  //bounderies_check(min, max, 1, Q_len, step);  
 
   if (Q_type !== "checkbox"){
     if(["multi_biased", "multi_random"].includes(A_type)){
@@ -239,25 +254,35 @@ function error_check(question_data, ans, step){
 
 function getResponseIndex(ans_config) {
   const { type, params } = ans_config;
-  if (type === "gaussian") {
-    const [min, max, mean, stdev] = params;
-    return gaussianRandom_ans(min-1, max-1, mean-1, stdev);
-  } else if (type === "biased") {
-    return biased_random(...params);
-  } else if(type === "multi_biased"){
-    return multiple_biased(params);
-  }else if(type === "multi_random"){
-    const [min, max, amount] = params;
-    return multiple_random(min-1, max-1, amount);
-  }else if(type === "random"){
-    const [min, max] = params;
-    return get_random_int(min-1, max-1)
-  } else if (type === "biased_text") {
-    return biased_text(params);
-  } else if(type === "none"){
-    return null;
-  } else {
-    throw new Error(`Unknown type: ${type}`);
+  var min, max, mean, stdev, amount;
+
+  switch(type) {
+    case "gaussian":
+      [min, max, mean, stdev] = params;
+      return gaussianRandom_ans(min-1, max-1, mean-1, stdev);
+
+    case "biased":
+      return biased_random(...params);
+
+    case "multi_biased":
+      return multiple_biased(params);
+
+    case "multi_random":
+      [min, max, amount] = params;
+      return multiple_random(min-1, max-1, amount);
+
+    case "random":
+      [min, max] = params;
+      return get_random_int(min-1, max-1);
+
+    case "biased_text":
+      return biased_text(params);
+
+    case "none":
+      return null;
+
+    default:
+      throw new Error(`Unknown type: ${type}`);
   }
 }
 
@@ -306,10 +331,7 @@ async function send_prope(URL){
         await driver.wait(async () => {
           const readyState = await driver.executeScript("return document.readyState");
           return readyState === "complete";
-        }, 10000).then(() => {
-          console.log("Page loaded");
-        });
-        
+        }, 10000);
 
         let questionHolder = await driver.findElement(By.xpath(questionHolder_xpath));
         let q_elements = await get_children(questionHolder);  
@@ -321,7 +343,7 @@ async function send_prope(URL){
         let skip_counter = 0;
         for (i in q_elements){
           let current = await q_elements[i];
-          console.log(await current.getAttribute("class"));
+          //console.log(await current.getAttribute("class"));
           let current_data = await get_data(current, i);
           if (current_data === null) {
             skip_counter += 1;
@@ -356,7 +378,7 @@ async function send_prope(URL){
         submit_text = await submit_button.getAttribute("innerHTML");
         
         if(submit_text == "Submit"){
-          console.log("Prope done");
+          console.log("Probe done");
           return data;
         }
         await submit_button.click();
@@ -365,7 +387,7 @@ async function send_prope(URL){
 
 async function get_data(element, step){
   let data_stack = await get_children(element);
-  console.log(await data_stack);
+  //console.log(await data_stack);
 
   if (data_stack.length === 0){
     return null;
@@ -423,7 +445,8 @@ async function answer_question(ans, data, step, prev_answer_index){
   if(ans.logic !== undefined){
     switch (Object.keys(ans.logic)[0]) {
       case "prev_answer":
-        if (ans.logic.prev_answer[0] > prev_answer_index || prev_answer_index > ans.logic.prev_answer[1]){
+        if (ans.logic.prev_answer[0] > prev_answer_index+1 || prev_answer_index+1 > ans.logic.prev_answer[1]){
+          //console.log('Returning null due to logic criteria');
           return null;
         }
         break;
@@ -560,7 +583,7 @@ async function submitWave(applicants, _URL, answers){
     const service = new firefox.ServiceBuilder(platform.geckodriver_path); // path to geckodriver
     const options = new firefox.Options()
 
-    //.addArguments('--headless')
+    .addArguments('--headless')
     .addArguments('--no-sandbox')
     .setBinary(platform.firefox_path)
     
