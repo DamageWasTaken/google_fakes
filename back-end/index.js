@@ -1,7 +1,7 @@
-const {By, Builder, Browser, until, Capabilities} = require('selenium-webdriver');
+const {By, Builder, Browser, until, Capabilities, WebElement} = require('selenium-webdriver');
 const assert = require("assert");
 const firefox = require('selenium-webdriver/firefox');
-const questionHolder_xpath = '//*[@id="mG61Hd"]/div[2]/div/div[2]';
+const questionsContainerXPath = '//*[@id="mG61Hd"]/div[2]/div/div[2]';
 var driver;
 const os = require("os");
 
@@ -12,138 +12,204 @@ const { get } = require('http');
 
 ////////////////////////////////////////////////
 const answers = [
+  /*{type: "gaussian", params: [1,5,1.7,1.3]},
+  {type: "biased", params: [70,15,8,]},
   {type: "gaussian", params: [1,5,1.7,1.3]},
-  {type: "gaussian", params: [1,7,1.9,1.3]},
+  {type: "gaussian", params: [1,6,2.3,1.3]},
   {type: "biased", params: [59,38,3]},
-  {type: "gaussian", params: [1,6,1,1.1]},
+  {type: "gaussian", params: [1,6,2,1.1]},
   {type: "biased", params: [52,12,36]},
   {type: "gaussian", params: [1,5,4,1.7]},
   {type: "gaussian", params: [1,4,2.7,1.4], logic: {"prev_answer": [4,5]}},
   {type: "biased", params: [3,11,86]},
-  {type: "multi_biased", params: [8,10,4,2,7,8,2,1,2]},
+  {type: "multi_biased", params: [3,2,0,1,7,6,2,0,2]},
   {type: "gaussian", params: [2,7,5.4,1.6]},
   {type: "random", params: [1,7]},
-  {type: "random", params: [1,7]},
+  {type: "random", params: [1,7]},*/
 ];
 
-const applicants = 472;
-const original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe_Fx31KB48P0Np_yuHRsi-pPeq4O3H8uoZTy1WKhwsAy18ug/viewform'
+const applicants = 1;
+const  original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfihgEgw1Zokr9RvFH8RyAu5F7RZ8Ul_AgzxYd6VHDqGun7YQ/viewform';
+//const original_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSe_Fx31KB48P0Np_yuHRsi-pPeq4O3H8uoZTy1WKhwsAy18ug/viewform'
 
 ///////////////////////////////////////////////
 
 const identifiers ={
-  "checkbox": 4,
-  "scale": 5,
-  "multipleChoice": 2,
-  "rating":18,
+  "trickster":-1,
   "shortText":0,
   "longText":1,
+  "multipleChoice":2,
   "dropdown":3,
-  "trickster":-1
+  "checkbox": 4,
+  "scale": 5,
+  "multipleGridChoice":7,
+  "rating":18,
 };
 
-function get_random_int(min, max) {
-  min = Math.round(min);
-  max = Math.round(max);
-  return Math.floor(Math.random() * (max - min+1)) + min;
-}
+/* Utility Functions */
 
-function gaussianRandom_ans(min, max, mean, stdev) {
-  var dist = [];
-  var sum = 0;
-  for (var i = min; i<=max; i++){
-    sum += (1/(stdev*Math.sqrt(2 * Math.PI)))*Math.pow(Math.E, -(1/2)*Math.pow((i-mean)/stdev,2));
+Object.defineProperty(Array.prototype, 'sum', {
+  value: function() {
+    return this.reduce((a, b) => a + b, 0);
   }
-  for (var i = min; i<=max; i++){
-    at_index = (1/(stdev*Math.sqrt(2 * Math.PI)))*Math.pow(Math.E, -(1/2)*Math.pow((i-mean)/stdev,2))
-    dist.push((at_index/sum)*100);
-  }
-  return biased_random(...dist);
-}
+});
 
-function compare_numbers(a, b) {
+Object.defineProperty(Array.prototype, 'indexOfAll', {
+  value: function(searchElement, fromIndex = 0) {
+    var indexes = [];
+    for (var i = fromIndex; i < this.length; i++) {
+      if (this[i] === searchElement) {
+        indexes.push(i);
+      }
+    }
+    return indexes;
+  }
+});
+
+Object.defineProperty(Math, 'randomInt', {
+  value: function(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+});
+
+Object.defineProperty(String.prototype, 'reverse', {
+  value: function() {
+    return this.split('').reverse().join('');
+  }
+});
+
+function compareNumbersDescending(a, b) {
   return b - a;
 }
 
-function find_occ(list, sus) {
-  const Occs = [];
-  for (let i = 0; i < list.length; i++) {
-    if (list[i] === sus) {
-      Occs.push(i);
+/* Index functions */
+
+/*
+@param {number} min - The minimum index (inclusive)
+@param {number} max - The maximum index (inclusive)
+@param {number} median - The median value of the Gaussian distribution (Where the peak occurs)
+@param {number} standardDeviation - The standard deviation of the Gaussian distribution (How spread out the values are | Higher values = more spread)
+@returns {number} - The selected index based on the Gaussian distribution
+*/
+function gaussianRandom(min, max, median, standardDeviation) {
+  var indexProbabilities;
+  var probabilityDensites = [];
+  var sum = 0;
+  for (var i = min; i <= max; i++) {
+    const exponent = -0.5 * Math.pow((i - median) / standardDeviation, 2);
+    probabilityDensites.push((1 / (standardDeviation * Math.sqrt(2 * Math.PI))) * Math.pow(Math.E, exponent));
+    sum += probabilityDensites[i - min];
+  }
+
+  indexProbabilities = probabilityDensites.map(probabilityDensity => (probabilityDensity / sum) * 100);
+
+  return biasedRandom(...indexProbabilities);
+}
+
+/*
+@param {...number} probabilities - The probabilities for each index adding up to 100
+@returns {number} - The selected index based on the biased probabilities
+*/
+function biasedRandom(...probabilities) {
+  const fate = Math.random() * 100;
+  const decendingProbabilities = probabilities.sort(compareNumbersDescending);
+  let cumulativeProbability = 0;
+
+  for (let i = 0; i < decendingProbabilities.length; i++) {
+    cumulativeProbability += decendingProbabilities[i];
+
+    if (fate <= cumulativeProbability) {
+      const targetProbability = decendingProbabilities[i];
+      const occurrences = probabilities.indexOfAll(targetProbability);
+      return occurrences[Math.randomInt(0, occurrences.length - 1)];
     }
   }
-  return Occs;
 }
 
-function biased_random(...args) {
-  const args_sorted = [...args].slice().sort(compare_numbers);
-  let array_sum = 0;
-  const fate = Math.random()*100;
-  let the_one = null;
-  for (i in args_sorted) {
-    const arg = args_sorted[i];
-    array_sum += arg;
-    if (fate >= array_sum - arg && fate <= array_sum) {
-      the_one = arg;
-      break;
+/*
+@param {number[]} probabilities - An array of probabilities for each index
+@returns {number[]} - An array of selected indexes based on the biased probabilities
+*/
+function multipleBiased(probabilities) {
+  var selectedIndexes = [];
+  for (let i = 0; i < probabilities.length; i++) {
+    const fate = Math.random() * 100;
+    if (fate <= probabilities[i]) {
+      selectedIndexes.push(i);
     }
   }
-  const Occs = find_occ(args, the_one);
-  return Occs[get_random_int(0, Occs.length - 1)];
+  return selectedIndexes;
 }
 
-function multiple_biased(args){
-  let picks = [];
-  for (let i = 0; i < args.length; i++) {
-    const fate = Math.random()*100;
-    if (fate <= args[i]) {
-      picks.push(i);
+/*
+@param {Object[]} args - An array of objects with 'ans' and 'prop' properties where sum of 'prop' being 100
+@returns {string} - The selected answer based on the biased probabilities
+*/
+function biasedText(args) {
+  let probabilities = args.map(item => item.prop);
+  let selectedIndex = biasedRandom(...probabilities);
+  return args[selectedIndex].ans;
+}
+
+/*
+@param {number} min - The minimum index (inclusive)
+@param {number} max - The maximum index (inclusive)
+@param {number} amount - The number of unique indexes to select
+@returns {number[]} - An array of selected unique indexes
+*/
+function multipleRandom(min, max, amount){
+  var selectedIndexes = [];
+  while (selectedIndexes.length < amount) {
+    const randomIndex = Math.randomInt(min, max);
+    if (!selectedIndexes.includes(randomIndex)) {
+      selectedIndexes.push(randomIndex);
     }
   }
-  /*
-  Idk what this is...
-
-  let picks = [];
-  let picks_amount = Math.floor(Math.random()*(args.max-args.min+1))+args.min;
-  let amount = 0;
-  while(picks_amount === amount) {
-    const fate = Math.random()*100;
-    const subject = Math.floor(Math.random()*args.props.lenght);
-    if(fate < args.props[subject]){
-      picks.push(i);
-    }
-  }*/
-  return picks;
+  return selectedIndexes;
 }
 
-function biased_text(args){
-  let props = [];
-  for(let i = 0; i<args.length; i++){
-    props.push(args[i].prop);
+/*
+@param {Object} answerConfig - The answer configuration object
+@returns {number|number[]|string|null} - The index(es) or text answer(s) based on the configuration
+*/
+function getResponseIndex(answerConfig) {
+  const { type, params } = answerConfig;
+  var min, max, mean, stdev, amount;
+
+  switch(type) {
+    case "gaussian":
+      [min, max, mean, stdev] = params;
+      return gaussianRandom(min-1, max-1, mean-1, stdev);
+
+    case "biased":
+      return biasedRandom(...params);
+
+    case "multi_biased":
+      return multipleBiased(params);
+
+    case "multi_random":
+      [min, max, amount] = params;
+      return multipleRandom(min-1, max-1, amount);
+
+    case "random":
+      [min, max] = params;
+      return Math.randomInt(min-1, max-1);
+
+    case "biased_text":
+      return biasedText(params);
+
+    case "none":
+      return null;
+
+    default: 
+      throw new Error(`Unknown type: ${type}`);
   }
-  return args[biased_random(...props)].ans;
 }
 
-function multiple_random(min, max, amount){
-  var picks = [];
-  var prop = 0
-  for(var i = 0; i<amount; i++){
-    const fate = Math.random();
-    const random = get_random_int(min, max);
-    if(fate < random){
-      picks.push(get_random_int);
-    }
-  }
-  return picks
-}
-
-function list_sum(list){
-  var sum = 0
-  for (i in list){
-    sum += list[i]
-  }
-  return sum
-}
+/* Error functions */
+//What is this mess
 
 function check_negs(list, step){
   for (i in list){
@@ -243,58 +309,21 @@ function error_check(question_data, ans, step){
       throw `CompatibilityError at ${step+1}: Answer type ${A_type} not fit for ${Q_type}`
       }
     else if(A_type === "biased"){
-      if (list_sum(params)!==100 && data.must_answer){
-        throw `LimitsError at ${step+1}: All percentages must add to 100% not ${list_sum(params)}%. The question is of type 'must-answer'`
-      } else if(list_sum(params)>100){  
-        throw `LimitsError at ${step+1}: All percentages must add to 100% or less not ${list_sum(params)}%`
+      if (params.sum()!==100 && data.mustAnswer){
+        throw `LimitsError at ${step+1}: All percentages must add to 100% not ${params.sum()}%. The question is of type 'must-answer'`
+      } else if(params.sum()>100){  
+        throw `LimitsError at ${step+1}: All percentages must add to 100% or less not ${params.sum()}%`
       }
     }
   }
 }
 
-function getResponseIndex(ans_config) {
-  const { type, params } = ans_config;
-  var min, max, mean, stdev, amount;
 
-  switch(type) {
-    case "gaussian":
-      [min, max, mean, stdev] = params;
-      return gaussianRandom_ans(min-1, max-1, mean-1, stdev);
-
-    case "biased":
-      return biased_random(...params);
-
-    case "multi_biased":
-      return multiple_biased(params);
-
-    case "multi_random":
-      [min, max, amount] = params;
-      return multiple_random(min-1, max-1, amount);
-
-    case "random":
-      [min, max] = params;
-      return get_random_int(min-1, max-1);
-
-    case "biased_text":
-      return biased_text(params);
-
-    case "none":
-      return null;
-
-    default:
-      throw new Error(`Unknown type: ${type}`);
-  }
-}
-
-async function get_children(element){
+async function elementChildren(element) {
   return await element.findElements(By.xpath("./*"));
 }
 
-function reverse_str(s){
-  return s.split('').reverse().join('');
-}
-
-async function get_xpath(element){
+async function elementXPath(element) {
   let xpath = await driver.executeScript(`
     function getElementXPath(el) {
       if (el && el.id) {
@@ -322,7 +351,80 @@ async function get_xpath(element){
   return xpath;
 }
 
-async function send_prope(URL){
+async function probeForum(URL) {
+  var data = [];
+  await driver.get(URL);
+
+  while(true){
+    await driver.wait(async () => {
+      const readyState = await driver.executeScript("return document.readyState");
+      return readyState === "complete";
+    }, 10000).then(() => {console.log("Done")});
+
+    //Main container that holds all questions
+    let questionsContainer = await driver.findElement(By.xpath(questionsContainerXPath));
+    //Array of the question elements inside the main container
+    let questionElements = await elementChildren(questionsContainer);
+
+    let pageData = [];
+
+    for (var i = 0; i < questionElements.length; i++){
+      let currentElement = await questionElements[i];
+      let currentData = await getElementData(currentElement);
+    
+      if (currentData === null) {
+        // If the given element is not a question, skip it
+        continue;
+      }
+
+      if (currentData.type === "unsupported"){
+        throw `CompatibilityError at ${parseInt(i)+1}: Unsupported itemtype`;
+      }
+
+      pageData.push(currentData);
+
+      let pageAnswer;
+      if (currentData.type === "longText" || currentData.type === "shortText"){
+        pageAnswer = {type: "biased_text", params: [{ans: " ", prop: 100}]};
+      } else {
+        pageAnswer = {type: "random", params: [1, 1]};
+      }
+
+      await answerQuestion(pageAnswer, currentData, i);
+
+    }
+
+    let continueButtonXPath = '/html/body/div/div[2]/form/div[2]/div/div[3]/div[1]/div[1]/';
+    // When forms have multiple pages a "back" button appears, therefore we change the XPath accordingly
+    continueButtonXPath += (data.length === 0) ? 'div/span/span' : 'div[2]/span/span';
+
+    //Add the "next"/"submit" button to the last question before the page change
+    if (pageData.length > 0) {
+      pageData[pageData.length - 1].continueXPath = [continueButtonXPath];
+    } else {
+      //For cases where there are blank sections/pages
+      data[data.length - 1].continueXPath.push(continueButtonXPath);
+    }
+
+    //We add the current page data to the full data array
+    data.push(...pageData);
+
+    let button = await driver.findElement(By.xpath(continueButtonXPath));
+    let buttonText = await button.getAttribute("innerHTML");
+
+    if (buttonText === "Submit") {
+      console.log("Probing complete");
+      return data;
+    } else {
+      //Continue to next page
+      await button.click();
+      console.log("Clicking next");
+    }
+
+  }
+}
+
+/*async function send_prope(URL){
       let data = [];
 
       await driver.get(URL);
@@ -333,8 +435,8 @@ async function send_prope(URL){
           return readyState === "complete";
         }, 10000);
 
-        let questionHolder = await driver.findElement(By.xpath(questionHolder_xpath));
-        let q_elements = await get_children(questionHolder);  
+        let questionHolder = await driver.findElement(By.xpath(questionsContainerXPath));
+        let q_elements = await elementChildren(questionHolder);  
         //console.log(q_elements);
 
         let page_data = [];
@@ -343,17 +445,21 @@ async function send_prope(URL){
         let skip_counter = 0;
         for (i in q_elements){
           let current = await q_elements[i];
-          //console.log(await current.getAttribute("class"));
-          let current_data = await get_data(current, i);
+          //let current_data = await get_data(current, i);
+          let current_data = await getElementData(current);
+          
           if (current_data === null) {
             skip_counter += 1;
             continue;
           }
+          if (current_data.type === "unsupported"){
+            throw `CompatibilityError at ${parseInt(i)+1}: Unsupported itemtype`;
+          }
           page_data.push(current_data);
           if(!["longText", "shortText"].includes(current_data.type)){
-            page_answers.push({type: "random", params: [1, current_data.length]});
+            page_answers.push({type: "random", params: [1, 1]});
           } else {
-            page_answers.push({type: "biased_text", params: [{ans: " ", prop: 100}]});
+            page_answers.push({type: "biased_text", params: [{ans: " ", prop: 100}]}); 
           }
           await answer_question(page_answers[i-skip_counter], page_data[i-skip_counter], i-skip_counter);
         }
@@ -366,10 +472,10 @@ async function send_prope(URL){
         }
 
         if (page_data.length > 0){
-          page_data[page_data.length-1].continue_xpath = [submit_button_xpath];
+          page_data[page_data.length-1].continueXPath = [submit_button_xpath];
         } else {
           let last_question = data[data.length-1];
-          last_question.continue_xpath.push(submit_button_xpath);
+          last_question.continueXPath.push(submit_button_xpath);
         };
         
         data.push(...page_data);
@@ -383,171 +489,220 @@ async function send_prope(URL){
         }
         await submit_button.click();
     }
-} 
+}*/
 
-async function get_data(element, step){
-  let data_stack = await get_children(element);
-  //console.log(await data_stack);
+async function getElementData(element) {
+  const elementData = await elementChildren(element);
 
-  if (data_stack.length === 0){
+  if (elementData.length === 0) {
     return null;
-  };
+  }
 
-  let raw_data = await data_stack[0].getAttribute("data-params");
+  let attributeData = await elementData[0].getAttribute("data-params");
 
-  let identifier;
-
+  let typeIdentifier;
   let data = {};
 
-  if([null, undefined].includes(raw_data)){
+  if (attributeData === null || attributeData === undefined) {
     return null;
   }
 
-  let must_answer_parent = await element.findElement(By.xpath("./div/div/div[1]/div"));
-  let must_answer_star = await get_children(must_answer_parent);
-  let must_answer_parameter = await must_answer_star[0].getAttribute("aria-describedby");
+  const mandatoryStar = await element.findElement(By.xpath("./div/div/div[1]/div/div"));
+  const mandatoryAttribute = await driver.executeScript("return arguments[0].querySelectorAll('[aria-label]')", mandatoryStar);
+  
+  data.mustAnswer = (mandatoryAttribute.length !== 0) ? true : false;
 
-  data.must_answer = ([null, undefined].includes(must_answer_parameter));
+  // The container of the question ellement has a data-params attribute that holds all data for the question
+  // We parse the data to extract what we need.
+  attributeData = attributeData.slice(4);
+  attributeData = JSON.parse(attributeData.reverse().slice(attributeData.reverse().indexOf("]", 1)).reverse());
+  attributeData = attributeData.slice(3,5);
 
-  raw_data = raw_data.slice(4);
-  raw_data = JSON.parse(reverse_str(reverse_str(raw_data).slice(reverse_str(raw_data).indexOf("]", 1))));
-  identifier = raw_data[3];
+  typeIdentifier = attributeData[0];
 
-  if (Object.values(identifiers).includes(identifier)){
-    data.type = Object.keys(identifiers)[Object.values(identifiers).indexOf(identifier)];
+  const typeIdentifierIndex = Object.values(identifiers).indexOf(typeIdentifier);
+  if (typeIdentifierIndex !== -1) {
+    data.type = Object.keys(identifiers)[typeIdentifierIndex]
   } else {
-    throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`;
+    data.type = "unsupported";
+    return data;
   }
 
-  if (!["shortText", "longText"].includes(data.type)){
-    data.length = raw_data[4][0][1].length;
+  //For non text questions, we find the number of options available
+  if (!["shortText", "longText"].includes(data.type)) {
+    data.length = attributeData[1][0][1].length;
   } else {
     data.length = null;
   }
 
-  data.element_xpath = await get_xpath(element);
-  return data
+  data.elementXPath = await elementXPath(element);
+  return data;
 }
 
-async function answer_question(ans, data, step, prev_answer_index){
-  let element = await driver.findElement(By.xpath(data.element_xpath));
-  let answer;
-  //console.log(data.must_answer);
+/*
+@param {Object} answerConfig - The answer configuration object
+@param {Object} questionData - The question data object
+@param {number} step - The current step index
+@param {number|null} previousAnswerIndex - The index of the previous answer, or null if none
+@returns {Promise<number|number[]|string|null>} - The selected index(es) or text answer(s) based on the configuration
+*/
+async function answerQuestion(answerConfig, questionData, step, previousAnswerIndex) {
+  let questionElement = await driver.findElement(By.xpath(questionData.elementXPath));
 
-  error_check(data, ans, step);
+  //error check
 
-  if(ans.type==="none"){
+  if(answerConfig.type === "none"){
     return;
   };
 
-  
+  /*
+  Needs reworking
   //Checking logic criteria
-  if(ans.logic !== undefined){
-    switch (Object.keys(ans.logic)[0]) {
-      case "prev_answer":
-        if (ans.logic.prev_answer[0] > prev_answer_index+1 || prev_answer_index+1 > ans.logic.prev_answer[1]){
-          //console.log('Returning null due to logic criteria');
+  if(answerConfig.logic !== undefined){
+    switch (Object.keys(answerConfig.logic)[0]) {
+      case "previousAnswer":
+        // Check if the previous answer index falls within the specified range
+        if (answerConfig.logic.previousAnswer[0] > previousAnswerIndex + 1 || previousAnswerIndex + 1 > answerConfig.logic.previousAnswer[1]){
           return null;
         }
         break;
     }
   }
+  */
 
+  //Ensure the question element is in view, otherwise some elements may not be interactable causing errors
   await driver.executeScript(
     "arguments[0].scrollIntoView({block: 'center'});", 
-    element
+    questionElement
   );
-  
-  switch(data.type){
-    case "checkbox": 
-      var check_choice = await getResponseIndex(ans);
-      let check_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]'))
-      let checkbox_options = await get_children(check_parent);
 
-      if(Array.isArray(check_choice)){
-        for(i in checkbox_options){
-          if(check_choice.includes(parseInt(i))){
-            let _box = await checkbox_options[i];
-            await _box.click();
-          }
-        }
-      } else {
-        let _box = await checkbox_options[check_choice];
-        await _box.click();
+  let choices = await getResponseIndex(answerConfig);
+
+  switch(questionData.type){
+    case "checkbox": 
+      if(!Array.isArray(choices)){
+        choices = [choices];
+      }
+
+      let checkboxParent = await questionElement.findElement(By.xpath('./div/div/div[2]/div[1]'))
+      let checkboxOptions = await elementChildren(checkboxParent);
+      for (let answerIndex of choices){
+        let checkbox = await checkboxOptions[answerIndex];
+        await checkbox.click();
       }
       break;
 
     case "scale":
-      var scale_choice = getResponseIndex(ans);
-      let scale_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
-      let scale_options = await get_children(scale_parent);
-      scale_options = scale_options.slice(1,-1);
-      let _scale = await scale_options[scale_choice];
-      answer = scale_choice;
-      await _scale.click();
+      let scaleParent = await questionElement.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+      let scaleOptions = await elementChildren(scaleParent);
+      scaleOptions = scaleOptions.slice(1,-1);
+      let scale = await scaleOptions[choices];
+      await scale.click();
       break;
 
     case "multipleChoice":
-      var multi_choice = getResponseIndex(ans);
-      let multi_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
-      //let multi_parent = await element.findElement(By.xpath('./div/div/div[2]/div'));
-      let multi_options = await get_children(multi_parent);
-      let _multi = await multi_options[multi_choice];
-      answer = multi_choice;
-      await _multi.click();
+      let multiParent = await questionElement.findElement(By.xpath('./div/div/div[2]/div[1]/div/span/div'))
+      let multiOptions = await elementChildren(multiParent);
+      let multi = await multiOptions[choices];
+      await multi.click();
       break;
 
     case "rating":
-      var rating_choice = getResponseIndex(ans);
-      let rating_parent = await element.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
-      let rating_options = await get_children(rating_parent);
-      rating_options = await rating_options.slice(1,-1);
-      let _rating = await rating_options[rating_choice];
-      answer = rating_choice;
-      await _rating.click();
+      let ratingParent = await questionElement.findElement(By.xpath('./div/div/div[2]/div[1]/span/div'))
+      let ratingOptions = await elementChildren(ratingParent);
+      ratingOptions = ratingOptions.slice(1,-1);
+      let rating = await ratingOptions[choices];
+      await rating.click();
       break;
+
     case "shortText":
-      let short_paragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
-      await driver.executeScript("arguments[0].scrollIntoView(true);", short_paragraph);
-      await short_paragraph.sendKeys(getResponseIndex(ans));
+      let shortParagraph = await questionElement.findElement(By.xpath('./div/div/div[2]/div/div[1]/div/div[1]/input'));
+      await driver.executeScript("arguments[0].scrollIntoView({block: 'center'});", shortParagraph);
+      await shortParagraph.sendKeys(choices);
       break;
 
     case "longText":
-      let long_paragraph = await element.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
-      await driver.executeScript("arguments[0].scrollIntoView(true);", long_paragraph);
-      await long_paragraph.sendKeys(getResponseIndex(ans));
+      let longParagraph = await questionElement.findElement(By.xpath('./div/div/div[2]/div/div[1]/div[2]/textarea'));
+      await driver.executeScript("arguments[0].scrollIntoView({block: 'center'});", longParagraph);
+      await longParagraph.sendKeys(choices);
       break;
-
+    
     case "dropdown":
-      let dropdown_choice = getResponseIndex(ans);
-      let dropdown = await element.findElement(By.xpath('./div/div/div[2]/div'));
-      let choices = await get_children(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]')));
+      let dropdown = await questionElement.findElement(By.xpath('./div/div/div[2]/div'));
       await dropdown.click();
       await driver.wait(
         until.elementLocated(By.xpath(`html/body/div[1]/div[2]/form/div[2]/div/div[2]/div[${Number(step)+1}]/div/div/div[2]/div/div[2]/div[3]`)),
         5000
       );
-      await choices[dropdown_choice+2].click();
-      answer = dropdown_choice;
+      let dropdownOptions = await elementChildren(await questionElement.findElement(By.xpath('./div/div/div[2]/div/div[2]')));
+      await dropdownOptions[choices+2].click();
       await driver.wait(
-        until.stalenessOf(await element.findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
+        until.stalenessOf(await questionElement.findElement(By.xpath('./div/div/div[2]/div/div[2]/div[3]'))),
         500
       );
       break;
+    case "multipleGridChoice":
+      let gridParent = await questionElement.findElement(By.xpath('./div/div/div[2]/div/div/div'));
+      //Nodelist containing all rows
+      let rows = await driver.executeScript("return arguments[0].querySelectorAll('[role=radiogroup]')", gridParent)
 
+      for (let i = 0; i < rows.length; i++){
+        let rowOptions = await driver.executeScript("return arguments[0].querySelectorAll('div[role=radio]')", rows[i]);
+        await rowOptions[getResponseIndex(answerConfig)].click();
+      }
+
+      break;
     default:
       throw `CompatibilityError at ${parseInt(step)+1}: Unsupported itemtype`
   }
-  return answer;
-};
 
+  return choices;
+
+}
+
+/*
+@param {string[]} buttonXPaths - An array of XPaths for the buttons to click
+*/
+async function nextPage(buttonXPaths) {
+  //For cases where there are pages with no elements/questions the continueXPath contains multiple XPaths
+  for (let button of buttonXPaths) {
+    let continueButton = await driver.findElement(By.xpath(button));
+    await continueButton.click();
+    //Wait until the next page is loaded
+    await driver.wait(async () => {
+      const readyState = await driver.executeScript("return document.readyState");
+      return readyState === "complete";
+    }, 10000);
+  }
+}
+
+async function submitFakeResponse(answersheet, data) {
+  let previousAnswerIndex = null;
+
+  for (var step = 0; step < data.length; step++) {
+    
+    previousAnswerIndex = await answerQuestion(answersheet[step], data[step], step, previousAnswerIndex);
+
+    if (data[step].continueXPath !== undefined) {
+      await nextPage(data[step].continueXPath);
+    }
+  }
+  var returnXPath = '/html/body/div[1]/div[2]/div[1]/div/div[4]/a';
+
+  await driver.wait(
+    until.elementLocated(By.xpath(returnXPath)),
+    10000
+  );
+}
+
+/*
 async function submitFakeResponse(answersheet, data){
   let prev_answer_index = null;
   for (step in data){
     prev_answer_index = await answer_question(answersheet[step], data[step], step, prev_answer_index);
-    if(data[step].continue_xpath !== undefined){
-      for(var i in data[step].continue_xpath){
-        let continue_button = await driver.findElement(By.xpath(data[step].continue_xpath[i]));
+    if(data[step].continueXPath !== undefined){
+      for(var i in data[step].continueXPath){
+        let continue_button = await driver.findElement(By.xpath(data[step].continueXPath[i]));
         await continue_button.click();
         await driver.wait(async () => {
           const ready_state = await driver.executeScript("return document.readyState");
@@ -564,6 +719,7 @@ async function submitFakeResponse(answersheet, data){
     10000
   );
 }
+*/
 
 async function submitWave(applicants, _URL, answers){
   var URL;
@@ -583,7 +739,7 @@ async function submitWave(applicants, _URL, answers){
     const service = new firefox.ServiceBuilder(platform.geckodriver_path); // path to geckodriver
     const options = new firefox.Options()
 
-    .addArguments('--headless')
+    //.addArguments('--headless')
     .addArguments('--no-sandbox')
     .setBinary(platform.firefox_path)
     
@@ -604,7 +760,7 @@ async function submitWave(applicants, _URL, answers){
     .setFirefoxOptions(options)
     .build();
 
-    let prope_data = await send_prope(URL);
+    let prope_data = await probeForum(URL);
 
     for(let i = 0; i<applicants; i++){
       console.log(i+1)
@@ -615,7 +771,7 @@ async function submitWave(applicants, _URL, answers){
       }, 10000);
 
       await driver.wait(
-        until.elementLocated(By.xpath(questionHolder_xpath)),
+        until.elementLocated(By.xpath(questionsContainerXPath)),
         10000
       );
       if (ans.length>prope_data.length){
@@ -633,6 +789,5 @@ async function submitWave(applicants, _URL, answers){
     driver.close();
   }
 }
-
 
 submitWave(applicants, original_URL, answers);
